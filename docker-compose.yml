@@ -1,0 +1,87 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Backend Laravel — PHP-FPM (igual que producción)
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    volumes:
+      - ./api-layerbase:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - layerbase
+    # No expone puertos: Nginx habla con él por la red interna (app:9000).
+
+  # ---------------------------------------------------------------------------
+  # Base de datos PostgreSQL
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: layerbase
+      POSTGRES_USER: layerbase
+      POSTGRES_PASSWORD: LayerBase_2026
+    ports:
+      # Expuesto en 5432 por si quieres conectar un cliente desde el host.
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U layerbase -d layerbase"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - layerbase
+
+  # ---------------------------------------------------------------------------
+  # Servidor web Nginx — sirve el backend en http://localhost:8000
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "8000:80"
+    volumes:
+      - ./api-layerbase:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - layerbase
+
+  # ---------------------------------------------------------------------------
+  # Frontend Vite (React) — http://localhost:5173
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend-layerbase
+      dockerfile: ../docker/frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      # El proxy de Vite corre dentro del contenedor, así que /api se redirige
+      # al servicio nginx por la red interna, no a localhost.
+      VITE_PROXY_TARGET: http://nginx:80
+      # Mejora la detección de cambios en volúmenes montados (macOS/Windows).
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - ./frontend-layerbase:/app
+      # Volumen anónimo para conservar el node_modules instalado en la imagen.
+      - /app/node_modules
+    depends_on:
+      - nginx
+    networks:
+      - layerbase
+
+networks:
+  layerbase:
+    driver: bridge
+
+volumes:
+  pgdata:

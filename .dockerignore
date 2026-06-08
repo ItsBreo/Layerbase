@@ -1,0 +1,6 @@
+# Contexto de build raíz (usado por la imagen PHP).
+**/node_modules
+**/vendor
+**/dist
+**/dist-ssr
+.git
