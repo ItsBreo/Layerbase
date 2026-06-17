@@ -7,6 +7,12 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
 
+    /* Alias de importación `@/*` -> `src/*` (espejo de vite.config.ts).
+       En TS 6 los `paths` se resuelven relativos a este archivo, sin baseUrl. */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
