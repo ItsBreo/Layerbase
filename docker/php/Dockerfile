@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.4-fpm
 
 # Argumentos para alinear el usuario del contenedor con el del host (evita
 # problemas de permisos en los volúmenes montados, sobre todo en Linux).

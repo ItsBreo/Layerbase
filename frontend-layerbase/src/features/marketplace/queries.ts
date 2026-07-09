@@ -46,6 +46,20 @@ async function fetchPlatformStats(): Promise<PlatformStats> {
   return MOCK_STATS
 }
 
+// Componentes subidos por el usuario autenticado. MOCK: devuelve un subconjunto
+// atribuido al propio usuario. DESPUÉS:
+//   // const { data } = await api.get('/components', { params: { author: 'me' } })
+//   // return data
+async function fetchMyComponents(authorName: string): Promise<ComponentSummary[]> {
+  await delay(500)
+  // Subconjunto con variedad de stacks (React, Vanilla y Angular).
+  const mineIds = [1, 4, 6, 5, 8]
+  return MOCK_COMPONENTS.filter((component) => mineIds.includes(component.id)).map((component) => ({
+    ...component,
+    author: { name: authorName, avatarUrl: null },
+  }))
+}
+
 // --- Hooks (lo que consume la UI) ------------------------------------------
 
 export function useLatestComponents(limit = 8) {
@@ -60,6 +74,14 @@ export function usePlatformStats() {
   return useQuery({
     queryKey: ['stats', 'platform'],
     queryFn: fetchPlatformStats,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useMyComponents(authorName: string) {
+  return useQuery({
+    queryKey: ['components', 'mine', authorName],
+    queryFn: () => fetchMyComponents(authorName),
     staleTime: 5 * 60 * 1000,
   })
 }

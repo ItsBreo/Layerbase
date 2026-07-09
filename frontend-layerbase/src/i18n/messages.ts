@@ -48,6 +48,11 @@ export const messages = {
       connected: 'Conectado',
       notConnected: 'Sin conectar',
       roles: { user: 'Comprador', author: 'Autor', admin: 'Administrador' },
+      myComponents: {
+        title: 'Tus componentes',
+        subtitle: 'Los componentes que has publicado.',
+        empty: 'Todavía no has publicado ningún componente.',
+      },
     },
     admin: {
       badge: 'Administración',
@@ -163,6 +168,11 @@ export const messages = {
       connected: 'Connected',
       notConnected: 'Not connected',
       roles: { user: 'Buyer', author: 'Author', admin: 'Administrator' },
+      myComponents: {
+        title: 'Your components',
+        subtitle: 'The components you’ve published.',
+        empty: 'You haven’t published any components yet.',
+      },
     },
     admin: {
       badge: 'Administration',

@@ -3,19 +3,21 @@
  * <ProtectedRoute>; demuestra el consumo de la sesión.
  */
 import { motion } from 'framer-motion'
-import { BadgeCheck, Mail, ShieldCheck, Store } from 'lucide-react'
+import { BadgeCheck, Mail, Store } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { useAuth } from '@/auth/AuthContext'
 import { useI18n } from '@/i18n/useI18n'
+import { useMyComponents } from '@/features/marketplace/queries'
+import { ComponentCard, ComponentCardSkeleton } from '@/components/home/ComponentCard'
 
 export default function Dashboard() {
   const { user } = useAuth()
   const { t } = useI18n()
+  const { data: myComponents, isLoading: loadingComponents } = useMyComponents(user?.name ?? '')
   if (!user) return null
 
   const cards = [
     { icon: Mail, label: t('dashboard.email'), value: user.email },
-    { icon: ShieldCheck, label: t('dashboard.role'), value: t(`dashboard.roles.${user.role}`) },
     {
       icon: BadgeCheck,
       label: t('dashboard.emailVerified'),
@@ -63,6 +65,30 @@ export default function Dashboard() {
             )
           })}
         </div>
+
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.24, type: 'spring', stiffness: 200, damping: 24 }}
+          className="mt-16"
+        >
+          <h2 className="text-2xl">{t('dashboard.myComponents.title')}</h2>
+          <p className="mt-1 text-muted">{t('dashboard.myComponents.subtitle')}</p>
+
+          {myComponents && myComponents.length === 0 ? (
+            <p className="mt-6 rounded-2xl border border-dashed border-border bg-surface/40 p-10 text-center text-muted">
+              {t('dashboard.myComponents.empty')}
+            </p>
+          ) : (
+            <div className="mt-6 flex flex-wrap gap-4">
+              {loadingComponents || !myComponents
+                ? Array.from({ length: 3 }).map((_, i) => <ComponentCardSkeleton key={i} />)
+                : myComponents.map((component) => (
+                    <ComponentCard key={component.id} component={component} />
+                  ))}
+            </div>
+          )}
+        </motion.section>
       </main>
     </AppShell>
   )
