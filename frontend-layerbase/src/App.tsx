@@ -9,6 +9,7 @@
  * El callback de OAuth es público porque procesa el token antes de existir la
  * sesión.
  */
+import { Suspense, lazy } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { AdminRoute, GuestRoute, ProtectedRoute } from '@/auth/guards'
 import Login from '@/Login/Login'
@@ -20,12 +21,33 @@ import Home from '@/pages/Home'
 import Dashboard from '@/pages/Dashboard'
 import AdminPanel from '@/pages/AdminPanel'
 import NotFound from '@/pages/NotFound'
+import Explore from '@/studio/Explore'
+import ComponentDetail from '@/studio/ComponentDetail'
+import MyComponents from '@/studio/MyComponents'
+import MyComponentDetail from '@/studio/MyComponentDetail'
+
+// El formulario (Monaco) y el preview (Sandpack) cargan editores pesados que
+// solo hacen falta en el studio: se cargan bajo demanda para no lastrar el
+// arranque de la app.
+const ComponentForm = lazy(() => import('@/studio/ComponentForm'))
+const ComponentPreview = lazy(() => import('@/studio/ComponentPreview'))
+
+/** Spinner de carga para las rutas diferidas. */
+function RouteFallback() {
+  return (
+    <div className="flex min-h-svh items-center justify-center bg-bg">
+      <div className="size-8 animate-spin rounded-full border-2 border-border border-t-accent" />
+    </div>
+  )
+}
 
 export default function App() {
   return (
     <Routes>
       {/* Públicas */}
       <Route path="/" element={<Home />} />
+      <Route path="/components" element={<Explore />} />
+      <Route path="/components/:slug" element={<ComponentDetail />} />
       <Route path="/auth/callback" element={<OAuthCallback />} />
 
       {/* Solo invitados */}
@@ -39,6 +61,42 @@ export default function App() {
       {/* Requieren sesión */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Studio del autor — CRUD de componentes (Módulo 3). */}
+        <Route path="/studio" element={<MyComponents />} />
+        <Route
+          path="/studio/new"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <ComponentForm mode="create" />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/studio/preview"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <ComponentPreview />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/studio/:slug/edit"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <ComponentForm mode="edit" />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/studio/:slug/preview"
+          element={
+            <Suspense fallback={<RouteFallback />}>
+              <ComponentPreview />
+            </Suspense>
+          }
+        />
+        <Route path="/studio/:slug" element={<MyComponentDetail />} />
       </Route>
 
       {/* Solo administradores */}

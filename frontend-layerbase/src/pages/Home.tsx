@@ -81,7 +81,7 @@ export default function Home() {
           )}
 
           <Link
-            to={isAuthenticated ? '/' : '/login'}
+            to={isAuthenticated ? '/components' : '/login'}
             className="inline-flex min-w-[13rem] items-center justify-center gap-2 rounded-pill border border-border bg-surface/50 px-6 py-3 text-sm font-semibold text-text backdrop-blur transition hover:border-accent active:scale-[0.98]"
           >
             {isAuthenticated ? t('home.ctaExplore') : t('home.ctaLogin')}

@@ -10,7 +10,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { NavLink } from 'react-router-dom'
-import { Home, LayoutDashboard, ShieldCheck, type LucideIcon } from 'lucide-react'
+import { Compass, Home, LayoutDashboard, Package, ShieldCheck, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
@@ -27,9 +27,13 @@ export function SideNav() {
   const { isAuthenticated, isAdmin } = useAuth()
   const { t } = useI18n()
 
-  const items: NavItem[] = [{ to: '/', label: t('nav.home'), icon: Home, end: true }]
+  const items: NavItem[] = [
+    { to: '/', label: t('nav.home'), icon: Home, end: true },
+    { to: '/components', label: t('explore.title'), icon: Compass },
+  ]
   if (isAuthenticated) {
     items.push({ to: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard })
+    items.push({ to: '/studio', label: t('studio.nav'), icon: Package })
     if (isAdmin) items.push({ to: '/admin', label: t('nav.admin'), icon: ShieldCheck })
   }
 

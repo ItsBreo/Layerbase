@@ -198,15 +198,22 @@ class ComponentController extends Controller
         }
     }
 
-    /** Ordenación del listado. Por defecto, lo más reciente publicado primero. */
+    /**
+     * Ordenación del listado. Por defecto, cronológico ASCENDENTE (lo más
+     * antiguo publicado primero), que es el orden de la vista principal tipo
+     * Pinterest. El desempate por `id` estabiliza la paginación cuando varios
+     * componentes comparten `published_at`.
+     */
     private function applySorting(Builder $query, Request $request): void
     {
         match ($request->input('sort')) {
+            'newest' => $query->orderByDesc('published_at')->orderByDesc('id'),
             'price_asc' => $query->orderBy('price'),
             'price_desc' => $query->orderByDesc('price'),
             'rating' => $query->orderByDesc('rating_avg'),
             'downloads' => $query->orderByDesc('downloads'),
-            default => $query->orderByDesc('published_at'),
+            'oldest' => $query->orderBy('published_at')->orderBy('id'),
+            default => $query->orderBy('published_at')->orderBy('id'),
         };
     }
 
