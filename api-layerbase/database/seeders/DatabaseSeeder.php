@@ -19,6 +19,9 @@ class DatabaseSeeder extends Seeder
     {
         $this->seedAdmin();
 
+        // Catálogo base de categorías (idempotente, seguro también en prod).
+        $this->call(CategorySeeder::class);
+
         // Datos de ejemplo solo fuera de producción.
         if (! app()->isProduction()) {
             User::factory()->create([
