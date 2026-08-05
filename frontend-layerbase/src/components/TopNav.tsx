@@ -38,7 +38,7 @@ export function TopNav() {
 
           {isAuthenticated ? (
             <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-muted sm:inline">{user?.name}</span>
+              <span className="hidden text-sm font-semibold text-navy sm:inline">{user?.name}</span>
               <button
                 type="button"
                 onClick={handleLogout}

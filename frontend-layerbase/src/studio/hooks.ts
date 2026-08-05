@@ -6,6 +6,7 @@
  * que la lógica de caché viva en un solo sitio.
  */
 import {
+  keepPreviousData,
   useInfiniteQuery,
   useMutation,
   useQuery,
@@ -47,6 +48,9 @@ export function useExploreComponents(filters: ComponentFilters = {}) {
     queryFn: ({ pageParam }) => componentsApi.list({ ...filters, page: pageParam }),
     getNextPageParam: (last) =>
       last.meta.current_page < last.meta.last_page ? last.meta.current_page + 1 : undefined,
+    // Al cambiar de filtro mantiene los resultados previos en pantalla mientras
+    // llega la nueva página, evitando el parpadeo a skeleton.
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -54,6 +58,7 @@ export function useMyComponents(status?: ComponentStatus) {
   return useQuery({
     queryKey: componentKeys.mine(status),
     queryFn: () => componentsApi.mine({ status }),
+    placeholderData: keepPreviousData,
   })
 }
 

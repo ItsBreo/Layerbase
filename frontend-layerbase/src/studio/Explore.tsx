@@ -10,7 +10,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Loader2, Search } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
+import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { Select } from '@/components/ui/Field'
+import { Masonry } from '@/components/ui/Masonry'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 import { ComponentCard } from '@/studio/ComponentCard'
@@ -39,7 +42,7 @@ export default function Explore() {
     [stack, sort, q],
   )
 
-  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage, isPlaceholderData } =
     useExploreComponents(filters)
 
   const items = useMemo(() => data?.pages.flatMap((page) => page.data) ?? [], [data])
@@ -74,7 +77,7 @@ export default function Explore() {
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-muted">
             {t('explore.eyebrow')}
           </p>
-          <h1 className="mt-2 text-4xl">{t('explore.title')}</h1>
+          <AccentedTitle text={t('explore.title')} className="mt-2 text-4xl" />
           <p className="mt-2 text-muted">{t('explore.subtitle')}</p>
         </motion.div>
 
@@ -100,7 +103,7 @@ export default function Explore() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('explore.searchPlaceholder')}
-                className="h-11 w-48 rounded-md border border-border bg-bg/50 pl-9 pr-3 text-sm text-text outline-none transition placeholder:text-muted focus:border-accent"
+                className="h-11 w-48 rounded-md border border-border bg-bg pl-9 pr-3 text-sm text-text outline-none transition placeholder:text-muted focus:border-accent"
               />
             </div>
             {/* Orden */}
@@ -132,20 +135,29 @@ export default function Explore() {
               <p className="mb-4 font-mono text-xs text-muted">
                 {t('explore.count', { count: total })}
               </p>
-              <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
-                {items.map((component) => (
-                  <ComponentCard key={component.id} component={component} />
-                ))}
-              </div>
+              {/* `isPlaceholderData`: al cambiar de filtro mantenemos la rejilla
+                  anterior (sin parpadeo a skeleton) y solo la atenuamos mientras
+                  llega la nueva. */}
+              <Masonry
+                items={items}
+                getKey={(component) => component.id}
+                renderItem={(component) => <ComponentCard component={component} />}
+                className={cn('transition-opacity', isPlaceholderData && 'opacity-60')}
+              />
             </>
           )}
 
-          {/* Centinela + spinner de carga incremental */}
-          <div ref={sentinelRef} className="h-10" />
-          {isFetchingNextPage && (
-            <div className="flex justify-center py-6">
-              <Loader2 className="size-5 animate-spin text-muted" />
-            </div>
+          {/* Centinela + spinner de carga incremental. Solo ocupan espacio si aún
+              quedan páginas por cargar; si no, no dejan hueco muerto al final. */}
+          {hasNextPage && (
+            <>
+              <div ref={sentinelRef} className="h-10" />
+              {isFetchingNextPage && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="size-5 animate-spin text-muted" />
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
@@ -167,7 +179,7 @@ function StackChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-pill border px-3 py-1.5 text-xs font-medium transition',
+        'inline-flex items-center justify-center rounded-pill border px-3 py-1.5 text-xs font-medium transition',
         active
           ? 'border-accent bg-accent/10 text-accent'
           : 'border-border text-muted hover:border-accent/40 hover:text-text',
@@ -183,11 +195,7 @@ function GridSkeleton() {
   return (
     <div className="columns-1 gap-4 sm:columns-2 lg:columns-3 xl:columns-4">
       {heights.map((h, i) => (
-        <div
-          key={i}
-          style={{ height: h }}
-          className="mb-4 animate-pulse break-inside-avoid rounded-lg border border-border bg-surface/60"
-        />
+        <Skeleton key={i} style={{ height: h }} className="mb-4 break-inside-avoid rounded-lg" />
       ))}
     </div>
   )

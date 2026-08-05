@@ -8,30 +8,19 @@
  */
 import { Link } from 'react-router-dom'
 import { Download, Star } from 'lucide-react'
-import { PriceBadge } from '@/components/ui/Badge'
+import { PriceBadge, Tag } from '@/components/ui/Badge'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
+import { componentGradient, placeholderHeight } from '@/studio/placeholder'
 import type { Component } from '@/studio/types'
 
-/** Hash simple y estable de un string (para color/altura del placeholder). */
-function hash(str: string): number {
-  let h = 0
-  for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0
-  return Math.abs(h)
-}
-
-const PLACEHOLDER_HEIGHTS = [180, 220, 260, 300] as const
-
 function Placeholder({ component }: { component: Component }) {
-  const h = hash(component.slug)
-  const hue = h % 360
-  const height = PLACEHOLDER_HEIGHTS[h % PLACEHOLDER_HEIGHTS.length]
   return (
     <div
       className="flex items-center justify-center"
       style={{
-        height,
-        background: `linear-gradient(135deg, hsl(${hue} 55% 42%), hsl(${(hue + 40) % 360} 60% 28%))`,
+        height: placeholderHeight(component.slug),
+        background: componentGradient(component.slug),
       }}
     >
       <span className="px-4 text-center font-display text-lg font-bold text-white/90">
@@ -49,7 +38,7 @@ export function ComponentCard({ component }: { component: Component }) {
     <Link
       to={`/components/${component.slug}`}
       className={cn(
-        'group mb-4 block break-inside-avoid overflow-hidden rounded-lg border border-border bg-surface',
+        'group block overflow-hidden rounded-lg border border-border bg-surface',
         'transition duration-200 hover:-translate-y-0.5 hover:border-navy-200 hover:shadow-hover',
       )}
     >
@@ -78,9 +67,7 @@ export function ComponentCard({ component }: { component: Component }) {
 
         {/* Meta */}
         <div className="flex items-center justify-between pt-1 font-mono text-xs text-muted">
-          <span className="rounded-pill bg-navy-50 px-2 py-0.5 text-navy">
-            {t(`studio.stack.${component.stack}`)}
-          </span>
+          <Tag>{t(`studio.stack.${component.stack}`)}</Tag>
           <div className="flex items-center gap-3">
             {rating !== null && (
               <span className="inline-flex items-center gap-1">

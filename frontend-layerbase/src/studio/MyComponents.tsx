@@ -10,7 +10,9 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Download, Package, Pencil, Plus, Send, Trash2, Undo2 } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
+import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { Button } from '@/components/ui/Button'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PriceBadge, StatusBadge } from '@/components/ui/Badge'
 import { useI18n } from '@/i18n/useI18n'
@@ -26,7 +28,7 @@ import { COMPONENT_STATUSES, type Component, type ComponentStatus } from '@/stud
 export default function MyComponents() {
   const { t } = useI18n()
   const [status, setStatus] = useState<ComponentStatus | undefined>(undefined)
-  const { data, isLoading } = useMyComponents(status)
+  const { data, isLoading, isPlaceholderData } = useMyComponents(status)
 
   const items = data?.data ?? []
 
@@ -44,7 +46,7 @@ export default function MyComponents() {
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-muted">
               {t('studio.list.eyebrow')}
             </p>
-            <h1 className="mt-2 text-4xl">{t('studio.list.title')}</h1>
+            <AccentedTitle text={t('studio.list.title')} className="mt-2 text-4xl" />
             <p className="mt-2 text-muted">{t('studio.list.subtitle')}</p>
           </div>
           <Link to="/studio/new">
@@ -64,15 +66,21 @@ export default function MyComponents() {
           ))}
         </div>
 
-        {/* Lista */}
-        <div className="mt-6 space-y-3">
+        {/* Lista. Al cambiar de filtro `keepPreviousData` mantiene la lista y
+            solo la atenuamos mientras llega la nueva (sin parpadeo a skeleton). */}
+        <div
+          className={cn(
+            'mt-6 space-y-3 transition-opacity',
+            isPlaceholderData && 'opacity-60',
+          )}
+        >
           {isLoading ? (
             <ListSkeleton />
           ) : items.length === 0 ? (
             <EmptyState filtered={status !== undefined} />
           ) : (
-            items.map((component, i) => (
-              <ComponentRow key={component.id} component={component} index={i} />
+            items.map((component) => (
+              <ComponentRow key={component.id} component={component} />
             ))
           )}
         </div>
@@ -95,7 +103,9 @@ function StatusFilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-pill border px-3 py-1 text-xs font-medium transition',
+        // min-w + centrado: al traducir el texto el chip no cambia de ancho ni
+        // reordena la fila de filtros.
+        'inline-flex min-w-[5.5rem] items-center justify-center rounded-pill border px-3 py-1 text-xs font-medium transition',
         active
           ? 'border-accent bg-accent/10 text-accent'
           : 'border-border text-muted hover:border-accent/40 hover:text-text',
@@ -106,7 +116,7 @@ function StatusFilterChip({
   )
 }
 
-function ComponentRow({ component, index }: { component: Component; index: number }) {
+function ComponentRow({ component }: { component: Component }) {
   const { t } = useI18n()
   const submit = useSubmitComponent()
   const unpublish = useUnpublishComponent()
@@ -119,17 +129,17 @@ function ComponentRow({ component, index }: { component: Component; index: numbe
   const canUnpublish = component.status === 'published'
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04, type: 'spring', stiffness: 220, damping: 26 }}
-      className="group rounded-lg border border-border bg-surface p-4 transition hover:-translate-y-0.5 hover:border-navy-200 hover:shadow-hover"
-    >
+    <div className="group relative rounded-lg border border-border bg-surface p-4 transition-colors hover:border-navy-200">
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Info */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Link to={`/studio/${component.slug}`} className="truncate text-base font-semibold text-text hover:text-accent">
+            {/* Stretched link: cubre toda la tarjeta (::after) para que se pueda
+                pulsar en cualquier zona; las acciones van con z-10 por encima. */}
+            <Link
+              to={`/studio/${component.slug}`}
+              className="truncate text-base font-semibold text-text transition-colors after:absolute after:inset-0 group-hover:text-accent"
+            >
               {component.title}
             </Link>
             <StatusBadge status={component.status} />
@@ -145,8 +155,8 @@ function ComponentRow({ component, index }: { component: Component; index: numbe
           </div>
         </div>
 
-        {/* Acciones rápidas */}
-        <div className="flex shrink-0 items-center gap-1.5">
+        {/* Acciones rápidas (relative + z-10: por encima del stretched link) */}
+        <div className="relative z-10 flex shrink-0 items-center gap-1.5">
           {canSubmit && (
             <Button
               variant="secondary"
@@ -204,7 +214,7 @@ function ComponentRow({ component, index }: { component: Component; index: numbe
           unpublish.mutate(component.slug, { onSettled: () => setConfirmUnpublish(false) })
         }
       />
-    </motion.div>
+    </div>
   )
 }
 
@@ -229,10 +239,7 @@ function ListSkeleton() {
   return (
     <>
       {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="h-24 animate-pulse rounded-lg border border-border bg-surface/60"
-        />
+        <Skeleton key={i} className="h-24 rounded-lg" />
       ))}
     </>
   )

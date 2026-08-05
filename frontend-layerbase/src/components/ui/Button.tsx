@@ -21,7 +21,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
     'bg-accent text-white shadow-navy hover:bg-accent-hover active:scale-[0.98]',
   secondary:
     'border border-border bg-surface text-text hover:border-accent hover:shadow-hover active:scale-[0.98]',
-  ghost: 'text-muted hover:bg-bg hover:text-text active:scale-[0.98]',
+  ghost: 'text-text/80 hover:bg-navy-50 hover:text-text active:scale-[0.98]',
   danger: 'bg-danger text-white hover:brightness-110 active:scale-[0.98]',
 }
 

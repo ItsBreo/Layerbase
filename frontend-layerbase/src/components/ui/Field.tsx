@@ -45,7 +45,7 @@ export function FieldShell({
 }
 
 const baseControl =
-  'w-full rounded-md border bg-bg/50 px-3 text-sm text-text outline-none transition placeholder:text-muted focus:border-accent disabled:opacity-60'
+  'w-full rounded-md border bg-bg px-3 text-sm text-text outline-none transition placeholder:text-muted focus:border-accent disabled:opacity-60'
 
 type InputProps = ComponentPropsWithRef<'input'> & {
   label?: string
