@@ -77,8 +77,12 @@ Route::get('categories', [CategoryController::class, 'index'])->name('categories
 Route::get('tags', [TagController::class, 'index'])->name('tags.index');
 
 Route::prefix('components')->group(function () {
-    // --- Público ---
-    Route::get('/', [ComponentController::class, 'index'])->name('components.index');
+    // --- Público con auth OPCIONAL ---
+    // Si viene token, se resuelve el usuario (el autor ve sus borradores y las
+    // fichas reflejan al espectador); si no, siguen accesibles como invitado.
+    Route::get('/', [ComponentController::class, 'index'])
+        ->middleware('auth.optional')
+        ->name('components.index');
 
     // --- Autor autenticado ---
     // Nota: `my` y las rutas fijas se declaran ANTES del comodín {component}
@@ -98,6 +102,8 @@ Route::prefix('components')->group(function () {
         Route::get('{component}/download', [ComponentFileController::class, 'download'])->name('components.download');
     });
 
-    // --- Público (al final: no debe capturar rutas fijas como `my`) ---
-    Route::get('{component}', [ComponentController::class, 'show'])->name('components.show');
+    // --- Público con auth OPCIONAL (al final: no debe capturar `my`) ---
+    Route::get('{component}', [ComponentController::class, 'show'])
+        ->middleware('auth.optional')
+        ->name('components.show');
 });

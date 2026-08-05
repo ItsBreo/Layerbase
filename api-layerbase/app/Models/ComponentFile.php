@@ -46,10 +46,18 @@ class ComponentFile extends Model
             return $disk->temporaryUrl($this->path, $expiresAt, [
                 'ResponseContentDisposition' => 'attachment; filename="'.$this->filename.'"',
             ]);
-        } catch (\RuntimeException) {
-            // Disco local (dev): sin presigned URLs. Devolvemos la URL pública
-            // si el disco la soporta; si no, la ruta relativa.
-            return method_exists($disk, 'url') ? $disk->url($this->path) : $this->path;
+        } catch (\Throwable) {
+            // Discos sin presigned URLs (public/local en dev): devolvemos una URL
+            // pública RELATIVA (/storage/...). Al ser relativa funciona detrás del
+            // proxy de Vite y sin depender del puerto de APP_URL; nginx la sirve
+            // por el symlink de storage:link.
+            try {
+                $url = $disk->url($this->path);
+
+                return parse_url($url, PHP_URL_PATH) ?: $url;
+            } catch (\Throwable) {
+                return '/storage/'.ltrim($this->path, '/');
+            }
         }
     }
 }
