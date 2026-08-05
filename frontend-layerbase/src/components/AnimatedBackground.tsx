@@ -70,9 +70,10 @@ export function AnimatedBackground({ className }: { className?: string }) {
         <GridPattern offsetX={offsetX} offsetY={offsetY} />
       </motion.div>
 
-      {/* Halos de color de marca */}
+      {/* Halos de color de marca. El inferior usa `navy-mid` (azul profundo,
+          token decorativo) para no lavarse tras aclarar `--navy` en oscuro. */}
       <div className="absolute right-[-15%] top-[-20%] size-[45%] rounded-full bg-accent/20 blur-[130px]" />
-      <div className="absolute left-[-15%] bottom-[-25%] size-[45%] rounded-full bg-navy/25 blur-[130px]" />
+      <div className="absolute left-[-15%] bottom-[-25%] size-[45%] rounded-full bg-navy-mid/25 blur-[130px]" />
     </div>
   )
 }

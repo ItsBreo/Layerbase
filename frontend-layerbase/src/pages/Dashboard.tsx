@@ -13,15 +13,19 @@ export default function Dashboard() {
   const { t } = useI18n()
   if (!user) return null
 
+  // `id` estable (no traducido): la key de React no cambia al cambiar de idioma,
+  // así las tarjetas no se re-montan ni re-disparan la animación de entrada.
   const cards = [
-    { icon: Mail, label: t('dashboard.email'), value: user.email },
-    { icon: ShieldCheck, label: t('dashboard.role'), value: t(`dashboard.roles.${user.role}`) },
+    { id: 'email', icon: Mail, label: t('dashboard.email'), value: user.email },
+    { id: 'role', icon: ShieldCheck, label: t('dashboard.role'), value: t(`dashboard.roles.${user.role}`) },
     {
+      id: 'emailVerified',
       icon: BadgeCheck,
       label: t('dashboard.emailVerified'),
       value: user.email_verified_at ? t('dashboard.yes') : t('dashboard.pending'),
     },
     {
+      id: 'stripe',
       icon: Store,
       label: t('dashboard.stripe'),
       value: user.stripe_onboarded ? t('dashboard.connected') : t('dashboard.notConnected'),
@@ -39,7 +43,9 @@ export default function Dashboard() {
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-muted">
             {t('dashboard.eyebrow')}
           </p>
-          <h1 className="mt-2 text-4xl">{t('dashboard.greeting', { name: user.name })}</h1>
+          <h1 className="mt-2 text-4xl">
+            {t('dashboard.greeting')} <span className="text-navy">{user.name}</span>
+          </h1>
           <p className="mt-2 text-muted">{t('dashboard.subtitle')}</p>
         </motion.div>
 
@@ -48,11 +54,11 @@ export default function Dashboard() {
             const Icon = card.icon
             return (
               <motion.div
-                key={card.label}
+                key={card.id}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.06 * i, type: 'spring', stiffness: 200, damping: 24 }}
-                className="rounded-2xl border border-border bg-surface/60 p-5 backdrop-blur-xl transition hover:border-accent/50 hover:shadow-hover"
+                className="rounded-2xl border border-border bg-surface/60 p-5 backdrop-blur-xl"
               >
                 <div className="flex items-center gap-2 text-muted">
                   <Icon className="size-4" />

@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -63,6 +64,12 @@ class User extends Authenticatable
             'banned' => 'boolean',
             'stripe_onboarded' => 'boolean',
         ];
+    }
+
+    /** @return HasMany<Component, $this> Componentes publicados por el usuario. */
+    public function components(): HasMany
+    {
+        return $this->hasMany(Component::class);
     }
 
     /** ¿El usuario tiene el rol indicado? */

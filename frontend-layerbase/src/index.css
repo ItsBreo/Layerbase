@@ -19,9 +19,9 @@
   /* Superficies y texto */
   --bg: #f8f8f7;
   --surface: #ffffff;
-  --border: #e4e4e0;
+  --border: #d9d9d3; /* separadores algo más marcados (antes #e4e4e0, apenas visible) */
   --text: #0f0f0e;
-  --muted: #787672;
+  --muted: #6c6a66; /* ≥4.5:1 sobre blanco/bg (antes #787672, quedaba justo) */
 
   /* Marca */
   --accent: #2563eb;
@@ -48,13 +48,13 @@
 .dark {
   --bg: #0b0e1a;
   --surface: #111827;
-  --border: #1f2a40;
+  --border: #2a3852; /* separadores visibles en oscuro (antes #1f2a40, casi invisible) */
   --text: #eef0f6;
-  --muted: #4b5680;
+  --muted: #8b94be; /* ≥4.5:1 sobre las superficies oscuras (antes #4b5680, muy bajo) */
 
   --accent: #2563eb;
   --accent-h: #1d4ed8;
-  --navy: #3b5cc4;
+  --navy: #93a8f0; /* claro para legibilidad de pills/títulos sobre fondo oscuro */
   --navy-mid: #3b5cc4;
   --navy-50: #1f2a40;
   --navy-200: #3b5cc4;
@@ -122,6 +122,10 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Reserva siempre el hueco de la barra de scroll: al cambiar de idioma (o
+       cargar más contenido) la barra ya no aparece/desaparece, evitando el
+       salto horizontal del layout ("baile"). */
+    scrollbar-gutter: stable;
   }
 
   body {
