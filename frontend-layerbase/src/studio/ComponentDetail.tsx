@@ -11,11 +11,13 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Download, Loader2, Lock, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, Download, Lock, ShoppingCart } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/Button'
-import { PriceBadge } from '@/components/ui/Badge'
+import { PriceBadge, Tag } from '@/components/ui/Badge'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { fadeUpItem, staggerContainer } from '@/lib/motion'
 import { useAuth } from '@/auth/AuthContext'
 import { getErrorMessage } from '@/lib/api'
 import { formatPrice } from '@/lib/format'
@@ -23,6 +25,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { MarkdownBody } from '@/studio/MarkdownEditor'
 import { componentsApi } from '@/studio/api'
 import { useComponent } from '@/studio/hooks'
+import { componentGradient } from '@/studio/placeholder'
 import type { Component } from '@/studio/types'
 
 export default function ComponentDetail() {
@@ -36,9 +39,7 @@ export default function ComponentDetail() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <Loader2 className="size-6 animate-spin text-muted" />
-        </div>
+        <ComponentDetailSkeleton />
       </AppShell>
     )
   }
@@ -73,28 +74,32 @@ export default function ComponentDetail() {
 
   return (
     <AppShell>
-      <main className="mx-auto max-w-4xl px-6 py-12">
-        <button
+      <motion.main
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="mx-auto max-w-4xl px-6 py-12"
+      >
+        <motion.button
+          variants={fadeUpItem}
           type="button"
           onClick={() => navigate('/components')}
           className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition hover:text-text"
         >
           <ArrowLeft className="size-4" />
           {t('explore.title')}
-        </button>
+        </motion.button>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 220, damping: 26 }}
-        >
+        <motion.div variants={fadeUpItem}>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-3xl">{component.title}</h1>
             <PriceBadge price={component.price} isFree={component.is_free} />
           </div>
 
-          {/* Autor + meta */}
-          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted">
+          {/* Autor + meta. Alineado a una línea base común (items-center) y con
+              separadores '·' como elementos propios para que no se peguen al
+              texto ni desalineen respecto al avatar. */}
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
             {component.author && (
               <span className="inline-flex items-center gap-2">
                 {component.author.avatar_url ? (
@@ -104,53 +109,72 @@ export default function ComponentDetail() {
                     {component.author.name.charAt(0).toUpperCase()}
                   </span>
                 )}
-                {component.author.name}
+                <span className="font-medium text-text">{component.author.name}</span>
               </span>
             )}
-            <span className="font-mono text-xs">· {t(`studio.stack.${component.stack}`)}</span>
+            {component.author && <span className="text-border">·</span>}
+            <span className="font-mono text-xs">{t(`studio.stack.${component.stack}`)}</span>
             {component.category && (
-              <span className="font-mono text-xs">· {component.category.name}</span>
+              <>
+                <span className="text-border">·</span>
+                <span className="font-mono text-xs">{component.category.name}</span>
+              </>
             )}
           </div>
         </motion.div>
 
-        {/* Preview */}
-        {preview?.url && (
-          <div className="mt-6 overflow-hidden rounded-lg border border-border">
-            <img src={preview.url} alt={component.title} className="w-full object-cover" />
-          </div>
-        )}
+        {/* Preview. Prioridad: fichero preview → thumbnail → placeholder de marca.
+            El placeholder garantiza que SIEMPRE haya vista previa aunque el
+            componente no tenga imágenes subidas (p. ej. datos de demo). */}
+        <motion.div
+          variants={fadeUpItem}
+          className="mt-6 overflow-hidden rounded-lg border border-border"
+        >
+          {preview?.url || component.thumbnail_url ? (
+            <img
+              src={preview?.url ?? component.thumbnail_url ?? undefined}
+              alt={component.title}
+              className="w-full object-cover"
+            />
+          ) : (
+            <div
+              className="flex aspect-[16/9] items-center justify-center"
+              style={{ background: componentGradient(component.slug) }}
+            >
+              <span className="px-6 text-center font-display text-2xl font-bold text-white/90">
+                {component.title}
+              </span>
+            </div>
+          )}
+        </motion.div>
 
         {/* Descripción */}
-        <p className="mt-6 text-lg leading-relaxed text-text">{component.description}</p>
+        <motion.p variants={fadeUpItem} className="mt-6 text-lg leading-relaxed text-text">
+          {component.description}
+        </motion.p>
 
         {/* Tags */}
         {component.tags && component.tags.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <motion.div variants={fadeUpItem} className="mt-4 flex flex-wrap gap-2">
             {component.tags.map((tag) => (
-              <span
-                key={tag.id}
-                className="rounded-pill bg-navy-50 px-2.5 py-0.5 font-mono text-xs text-navy"
-              >
-                {tag.name}
-              </span>
+              <Tag key={tag.id}>{tag.name}</Tag>
             ))}
-          </div>
+          </motion.div>
         )}
 
         {/* CTA de acceso */}
-        <div className="mt-8">
+        <motion.div variants={fadeUpItem} className="mt-8">
           <AccessCta
             component={component}
             isAuthenticated={isAuthenticated}
             downloading={downloading}
             onDownload={handleDownload}
           />
-        </div>
+        </motion.div>
 
         {/* README */}
         {readme?.url && <Readme url={readme.url} />}
-      </main>
+      </motion.main>
     </AppShell>
   )
 }
@@ -219,5 +243,34 @@ function Readme({ url }: { url: string }) {
       </h2>
       <MarkdownBody source={data} />
     </section>
+  )
+}
+
+/** Skeleton de la ficha mientras carga (replica el layout real). */
+function ComponentDetailSkeleton() {
+  return (
+    <div className="mx-auto max-w-4xl px-6 py-12">
+      <Skeleton className="mb-6 h-5 w-40" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-6 w-16 rounded-pill" />
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <Skeleton className="size-6 rounded-full" />
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+      <Skeleton className="mt-6 aspect-[16/9] w-full rounded-lg" />
+      <div className="mt-6 space-y-2">
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-4/5" />
+      </div>
+      <div className="mt-4 flex gap-2">
+        <Skeleton className="h-6 w-16 rounded-pill" />
+        <Skeleton className="h-6 w-20 rounded-pill" />
+        <Skeleton className="h-6 w-14 rounded-pill" />
+      </div>
+      <Skeleton className="mt-8 h-11 w-44 rounded-md" />
+    </div>
   )
 }
