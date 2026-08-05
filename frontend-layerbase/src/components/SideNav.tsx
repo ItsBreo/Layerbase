@@ -29,7 +29,7 @@ export function SideNav() {
 
   const items: NavItem[] = [
     { to: '/', label: t('nav.home'), icon: Home, end: true },
-    { to: '/components', label: t('explore.title'), icon: Compass },
+    { to: '/components', label: t('explore.nav'), icon: Compass },
   ]
   if (isAuthenticated) {
     items.push({ to: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard })

@@ -26,6 +26,13 @@ export default defineConfig({
         target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8000',
         changeOrigin: true,
       },
+      // Archivos públicos de componentes (source/readme/preview) servidos por
+      // nginx vía el symlink /storage. Sin esto, las URLs relativas de descarga
+      // caerían en el dev server de Vite (404).
+      '/storage': {
+        target: process.env.VITE_PROXY_TARGET ?? 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
     // Necesario para que HMR funcione con volúmenes montados en Docker.
     watch: {

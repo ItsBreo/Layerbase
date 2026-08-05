@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
             'active' => \App\Http\Middleware\EnsureAccountIsActive::class,
+            'auth.optional' => \App\Http\Middleware\AuthenticateOptional::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

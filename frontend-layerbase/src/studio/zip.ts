@@ -129,3 +129,26 @@ export function codeToSourceFile(code: string, stack: string): File {
 export function readmeToFile(markdown: string): File {
   return new File([markdown], 'README.md', { type: 'text/markdown' })
 }
+
+/**
+ * Extrae el texto del primer archivo de un ZIP con método STORE (el que produce
+ * `zipTextFile`). Sirve para recuperar el código de un componente guardado y
+ * previsualizarlo. No soporta DEFLATE: para zips comprimidos externos lanza.
+ */
+export function unzipFirstTextFile(buffer: ArrayBuffer): string {
+  const view = new DataView(buffer)
+  // Firma del local file header.
+  if (buffer.byteLength < 30 || view.getUint32(0, true) !== 0x04034b50) {
+    throw new Error('No es un ZIP válido.')
+  }
+  const method = view.getUint16(8, true)
+  if (method !== 0) {
+    throw new Error('Solo se admite ZIP sin compresión (STORE).')
+  }
+  const compressedSize = view.getUint32(18, true)
+  const nameLength = view.getUint16(26, true)
+  const extraLength = view.getUint16(28, true)
+  const dataStart = 30 + nameLength + extraLength
+  const bytes = new Uint8Array(buffer, dataStart, compressedSize)
+  return new TextDecoder().decode(bytes)
+}
