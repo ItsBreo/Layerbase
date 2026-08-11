@@ -20,7 +20,8 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       role="group"
       aria-label="Idioma"
       className={cn(
-        'flex items-center rounded-pill border border-border bg-surface/60 p-0.5 text-xs font-semibold backdrop-blur',
+        // h-9: misma altura que el resto de controles de la barra superior.
+        'flex h-9 items-center rounded-pill border border-border bg-surface/60 p-0.5 text-xs font-semibold backdrop-blur',
         className,
       )}
     >
@@ -32,7 +33,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
             type="button"
             onClick={() => setLang(l)}
             aria-pressed={active}
-            className="relative flex w-9 items-center justify-center rounded-pill py-1 uppercase transition-colors"
+            className="relative flex h-8 w-9 items-center justify-center rounded-pill uppercase transition-colors"
           >
             {active && (
               <motion.span

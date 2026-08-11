@@ -6,12 +6,15 @@
  *  - Invitado → invita a iniciar sesión.
  *  - Gratuito / comprado / propio → descarga (URL firmada temporal).
  *  - De pago sin comprar → CTA de compra (módulo de compras, pendiente).
+ *
+ * La portada sigue una cascada de tres pasos (ver `<Cover>`): imagen subida por
+ * el autor → render en vivo del propio componente → placeholder de marca.
  */
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Download, Lock, ShoppingCart } from 'lucide-react'
+import { ArrowLeft, Download, Loader2, Lock, ShoppingCart } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/Button'
@@ -24,7 +27,8 @@ import { formatPrice } from '@/lib/format'
 import { useI18n } from '@/i18n/useI18n'
 import { MarkdownBody } from '@/studio/MarkdownEditor'
 import { componentsApi } from '@/studio/api'
-import { useComponent } from '@/studio/hooks'
+import { ComponentSandbox } from '@/studio/ComponentSandbox'
+import { useComponent, usePreviewCode } from '@/studio/hooks'
 import { componentGradient } from '@/studio/placeholder'
 import type { Component } from '@/studio/types'
 
@@ -35,6 +39,19 @@ export default function ComponentDetail() {
   const { isAuthenticated } = useAuth()
   const { data: component, isLoading } = useComponent(slug)
   const [downloading, setDownloading] = useState(false)
+
+  // Portada: la imagen del autor manda. Si no la ha subido, renderizamos el
+  // componente en vivo, que solo es posible si es React, tiene código y el
+  // espectador puede acceder a ese código (gratuito / comprado / propio).
+  // Se calcula antes de los early returns: los hooks no pueden ir después.
+  const coverImage = component?.preview_url ?? component?.thumbnail_url ?? null
+  const canRenderLive =
+    !!component &&
+    !coverImage &&
+    component.stack === 'react' &&
+    component.has_source === true &&
+    component.can_download_source
+  const liveCode = usePreviewCode(component?.slug, canRenderLive)
 
   if (isLoading) {
     return (
@@ -57,7 +74,6 @@ export default function ComponentDetail() {
     )
   }
 
-  const preview = component.files?.find((file) => file.type === 'preview')
   const readme = component.files?.find((file) => file.type === 'readme')
 
   const handleDownload = async () => {
@@ -103,13 +119,17 @@ export default function ComponentDetail() {
             {component.author && (
               <span className="inline-flex items-center gap-2">
                 {component.author.avatar_url ? (
-                  <img src={component.author.avatar_url} alt="" className="size-6 rounded-full" />
+                  <img src={component.author.avatar_url} alt="" className="size-5 rounded-full" />
                 ) : (
-                  <span className="grid size-6 place-items-center rounded-full bg-accent/15 text-xs font-semibold text-accent">
+                  <span className="grid size-5 place-items-center rounded-full bg-accent/15 text-[10px] font-semibold text-accent">
                     {component.author.name.charAt(0).toUpperCase()}
                   </span>
                 )}
-                <span className="font-medium text-text">{component.author.name}</span>
+                {/* Mismo tamaño que los chips de stack/categoría para que la
+                    línea de meta quede alineada; el nombre va en Syne. */}
+                <span className="font-display text-xs font-semibold text-text">
+                  {component.author.name}
+                </span>
               </span>
             )}
             {component.author && <span className="text-border">·</span>}
@@ -123,29 +143,17 @@ export default function ComponentDetail() {
           </div>
         </motion.div>
 
-        {/* Preview. Prioridad: fichero preview → thumbnail → placeholder de marca.
-            El placeholder garantiza que SIEMPRE haya vista previa aunque el
-            componente no tenga imágenes subidas (p. ej. datos de demo). */}
-        <motion.div
-          variants={fadeUpItem}
-          className="mt-6 overflow-hidden rounded-lg border border-border"
-        >
-          {preview?.url || component.thumbnail_url ? (
-            <img
-              src={preview?.url ?? component.thumbnail_url ?? undefined}
-              alt={component.title}
-              className="w-full object-cover"
-            />
-          ) : (
-            <div
-              className="flex aspect-[16/9] items-center justify-center"
-              style={{ background: componentGradient(component.slug) }}
-            >
-              <span className="px-6 text-center font-display text-2xl font-bold text-white/90">
-                {component.title}
-              </span>
-            </div>
-          )}
+        {/* Portada (ver cascada en la cabecera del archivo) */}
+        <motion.div variants={fadeUpItem} className="mt-6">
+          <Cover
+            component={component}
+            image={coverImage}
+            live={
+              canRenderLive
+                ? { code: liveCode.data, loading: liveCode.isLoading, failed: liveCode.isError }
+                : null
+            }
+          />
         </motion.div>
 
         {/* Descripción */}
@@ -176,6 +184,63 @@ export default function ComponentDetail() {
         {readme?.url && <Readme url={readme.url} />}
       </motion.main>
     </AppShell>
+  )
+}
+
+/**
+ * Portada de la ficha, en cascada de tres pasos:
+ *  1. Imagen subida por el autor (o thumbnail): manda siempre que exista.
+ *  2. Render en vivo en el sandbox, con el propio código del componente.
+ *  3. Placeholder de marca — último recurso: componente de pago, no React, sin
+ *     código subido, o el render falló.
+ */
+function Cover({
+  component,
+  image,
+  live,
+}: {
+  component: Component
+  image: string | null
+  live: { code?: string; loading: boolean; failed: boolean } | null
+}) {
+  const { t } = useI18n()
+
+  if (image) {
+    return (
+      <div className="overflow-hidden rounded-lg border border-border">
+        <img src={image} alt={component.title} className="w-full object-cover" />
+      </div>
+    )
+  }
+
+  if (live && !live.failed) {
+    return (
+      <div>
+        <div className="overflow-hidden rounded-lg border border-border">
+          {live.loading || !live.code ? (
+            <div className="flex aspect-[16/9] items-center justify-center bg-surface">
+              <Loader2 className="size-6 animate-spin text-muted" />
+            </div>
+          ) : (
+            <ComponentSandbox code={live.code} />
+          )}
+        </div>
+        <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-muted">
+          {t('explore.livePreview')}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="flex aspect-[16/9] items-center justify-center overflow-hidden rounded-lg border border-border"
+      style={{ background: componentGradient(component.slug) }}
+    >
+      <span className="px-6 text-center font-display text-2xl font-bold text-white/90">
+        {component.title}
+      </span>
+    </div>
   )
 }
 

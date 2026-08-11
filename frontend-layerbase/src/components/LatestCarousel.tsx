@@ -156,7 +156,9 @@ function CarouselCard({ component }: { component: Component }) {
           {component.title}
         </h3>
         {component.author && (
-          <p className="truncate font-mono text-xs text-muted">{component.author.name}</p>
+          <p className="truncate font-display text-xs font-semibold text-muted">
+            {component.author.name}
+          </p>
         )}
         <div className="flex items-center justify-between pt-1">
           <Tag>{t(`studio.stack.${component.stack}`)}</Tag>

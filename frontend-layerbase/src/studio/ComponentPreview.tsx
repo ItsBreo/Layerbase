@@ -9,17 +9,13 @@
  *  - Componente guardado (`/studio/:slug/preview`): descarga el source (URL
  *    firmada), lo descomprime y muestra el código real.
  */
-import { Sandpack } from '@codesandbox/sandpack-react'
-import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppShell } from '@/components/AppShell'
 import { useI18n } from '@/i18n/useI18n'
-import { useTheme } from '@/hooks/useTheme'
-import { componentsApi } from '@/studio/api'
-import { useComponent } from '@/studio/hooks'
-import { unzipFirstTextFile } from '@/studio/zip'
+import { ComponentSandbox } from '@/studio/ComponentSandbox'
+import { useComponent, usePreviewCode } from '@/studio/hooks'
 import type { Stack } from '@/studio/types'
 
 interface PreviewState {
@@ -36,27 +32,16 @@ export default function ComponentPreview() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
-  const { theme } = useTheme()
   const { slug } = useParams<{ slug: string }>()
   const state = (location.state as PreviewState | null) ?? {}
 
   // Componente guardado (si hay slug en la ruta).
   const { data: component } = useComponent(slug)
 
-  // Descarga + descomprime el código real del componente guardado. Solo se
-  // ejecuta si NO hay código en el state (borrador) y sí hay slug con source.
+  // Código del componente guardado, por el mismo camino que usa la ficha
+  // pública. Solo se pide si NO hay código en el state (borrador sin guardar).
   const draftCode = state.code?.trim()
-  const savedSource = useQuery({
-    queryKey: ['preview-source', slug],
-    enabled: !draftCode && !!slug && !!component?.has_source,
-    queryFn: async () => {
-      const { url } = await componentsApi.download(slug as string)
-      const res = await fetch(url)
-      const buffer = await res.arrayBuffer()
-      return unzipFirstTextFile(buffer)
-    },
-    retry: false,
-  })
+  const savedSource = usePreviewCode(slug, !draftCode && !!component?.has_source)
 
   const stack: Stack = state.stack ?? component?.stack ?? 'react'
   const isLoadingCode = !draftCode && !!slug && savedSource.isLoading && !!component?.has_source
@@ -93,12 +78,7 @@ export default function ComponentPreview() {
           </div>
         ) : (
           <div className="mt-8 overflow-hidden rounded-lg border border-border">
-            <Sandpack
-              template="react"
-              theme={theme === 'dark' ? 'dark' : 'light'}
-              files={{ '/App.js': code }}
-              options={{ editorHeight: 480, showLineNumbers: true }}
-            />
+            <ComponentSandbox code={code} withEditor height={480} />
           </div>
         )}
       </main>

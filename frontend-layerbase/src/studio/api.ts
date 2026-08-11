@@ -123,6 +123,16 @@ export const componentsApi = {
     const { data } = await api.get<DownloadResponse>(`/components/${idOrSlug}/download`)
     return data
   },
+
+  /**
+   * URL firmada del código para renderizarlo en el sandbox. Endpoint distinto
+   * de `download`: admite invitados, solo lo sirve si el componente es gratuito
+   * (o propio/comprado) y no cuenta como descarga.
+   */
+  async previewCode(idOrSlug: string | number): Promise<DownloadResponse> {
+    const { data } = await api.get<DownloadResponse>(`/components/${idOrSlug}/preview-code`)
+    return data
+  },
 }
 
 export const catalogApi = {

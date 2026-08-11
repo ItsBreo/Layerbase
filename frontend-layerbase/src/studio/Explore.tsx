@@ -1,10 +1,11 @@
 /**
  * Vista principal pública del marketplace — rejilla tipo Pinterest (masonry).
  *
- * - Orden por defecto: cronológico ASCENDENTE (lo más antiguo primero), con un
- *   selector para cambiarlo.
+ * - Orden por defecto: lo más reciente primero, con un selector para cambiarlo.
  * - Scroll infinito con IntersectionObserver sobre un centinela al final.
  * - Filtros ligeros: stack, búsqueda de texto (con debounce) y orden.
+ * - Entrada animada: cabecera y filtros en cascada al montar; las tarjetas, con
+ *   `whileInView` para que las páginas siguientes también entren animadas.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -15,6 +16,7 @@ import { Select } from '@/components/ui/Field'
 import { Masonry } from '@/components/ui/Masonry'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useI18n } from '@/i18n/useI18n'
+import { fadeUpItem, staggerContainer } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { ComponentCard } from '@/studio/ComponentCard'
 import { useExploreComponents } from '@/studio/hooks'
@@ -22,12 +24,22 @@ import type { ComponentFilters } from '@/studio/api'
 import { STACKS, type Stack } from '@/studio/types'
 
 type SortOption = NonNullable<ComponentFilters['sort']>
-const SORT_OPTIONS: SortOption[] = ['oldest', 'newest', 'downloads', 'rating', 'price_asc', 'price_desc']
+const SORT_OPTIONS: SortOption[] = [
+  'newest',
+  'oldest',
+  'downloads',
+  'rating',
+  'price_asc',
+  'price_desc',
+]
+
+/** Nº de tarjetas que entran en cascada al cargar; el resto, sin retardo. */
+const STAGGERED_CARDS = 12
 
 export default function Explore() {
   const { t } = useI18n()
   const [stack, setStack] = useState<Stack | undefined>(undefined)
-  const [sort, setSort] = useState<SortOption>('oldest')
+  const [sort, setSort] = useState<SortOption>('newest')
   const [search, setSearch] = useState('')
   const [q, setQ] = useState('')
 
@@ -68,59 +80,57 @@ export default function Explore() {
   return (
     <AppShell>
       <main className="mx-auto max-w-6xl px-6 py-12">
-        {/* Cabecera */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 24 }}
-        >
-          <p className="font-mono text-xs uppercase tracking-[0.25em] text-muted">
-            {t('explore.eyebrow')}
-          </p>
-          <AccentedTitle text={t('explore.title')} className="mt-2 text-4xl" />
-          <p className="mt-2 text-muted">{t('explore.subtitle')}</p>
-        </motion.div>
+        {/* Cabecera + filtros, en cascada al montar la página */}
+        <motion.div variants={staggerContainer} initial="hidden" animate="show">
+          <motion.div variants={fadeUpItem}>
+            <p className="font-mono text-xs uppercase tracking-[0.25em] text-muted">
+              {t('explore.eyebrow')}
+            </p>
+            <AccentedTitle text={t('explore.title')} className="mt-2 text-4xl" />
+            <p className="mt-2 text-muted">{t('explore.subtitle')}</p>
+          </motion.div>
 
-        {/* Barra de filtros */}
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          {/* Stack */}
-          <div className="flex flex-wrap gap-2">
-            <StackChip active={stack === undefined} onClick={() => setStack(undefined)}>
-              {t('explore.allStacks')}
-            </StackChip>
-            {STACKS.map((s) => (
-              <StackChip key={s} active={stack === s} onClick={() => setStack(s)}>
-                {t(`studio.stack.${s}`)}
+          {/* Barra de filtros */}
+          <motion.div variants={fadeUpItem} className="mt-8 flex flex-wrap items-center gap-3">
+            {/* Stack */}
+            <div className="flex flex-wrap gap-2">
+              <StackChip active={stack === undefined} onClick={() => setStack(undefined)}>
+                {t('explore.allStacks')}
               </StackChip>
-            ))}
-          </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            {/* Búsqueda */}
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('explore.searchPlaceholder')}
-                className="h-11 w-48 rounded-md border border-border bg-bg pl-9 pr-3 text-sm text-text outline-none transition placeholder:text-muted focus:border-accent"
-              />
-            </div>
-            {/* Orden */}
-            <Select
-              aria-label={t('explore.sort')}
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortOption)}
-              className="w-44"
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {t(`explore.sortOptions.${option}`)}
-                </option>
+              {STACKS.map((s) => (
+                <StackChip key={s} active={stack === s} onClick={() => setStack(s)}>
+                  {t(`studio.stack.${s}`)}
+                </StackChip>
               ))}
-            </Select>
-          </div>
-        </div>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              {/* Búsqueda */}
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t('explore.searchPlaceholder')}
+                  className="h-11 w-48 rounded-md border border-border bg-bg pl-9 pr-3 text-sm text-text outline-none transition placeholder:text-muted focus:border-accent"
+                />
+              </div>
+              {/* Orden */}
+              <Select
+                aria-label={t('explore.sort')}
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortOption)}
+                className="w-44"
+              >
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {t(`explore.sortOptions.${option}`)}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </motion.div>
+        </motion.div>
 
         {/* Rejilla masonry */}
         <div className="mt-8">
@@ -137,11 +147,32 @@ export default function Explore() {
               </p>
               {/* `isPlaceholderData`: al cambiar de filtro mantenemos la rejilla
                   anterior (sin parpadeo a skeleton) y solo la atenuamos mientras
-                  llega la nueva. */}
+                  llega la nueva.
+
+                  La entrada de cada tarjeta va con `whileInView` + `once` en vez
+                  de una cascada del contenedor: así las páginas siguientes del
+                  scroll infinito también entran animadas, y ninguna se re-anima
+                  al volver a pasar por encima. */}
               <Masonry
                 items={items}
                 getKey={(component) => component.id}
-                renderItem={(component) => <ComponentCard component={component} />}
+                renderItem={(component, index) => (
+                  <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-40px' }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 210,
+                      damping: 24,
+                      // Solo la primera hornada entra escalonada; a partir de
+                      // ahí cada tarjeta aparece al alcanzarla el scroll.
+                      delay: index < STAGGERED_CARDS ? index * 0.04 : 0,
+                    }}
+                  >
+                    <ComponentCard component={component} />
+                  </motion.div>
+                )}
                 className={cn('transition-opacity', isPlaceholderData && 'opacity-60')}
               />
             </>

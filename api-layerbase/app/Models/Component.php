@@ -177,6 +177,17 @@ class Component extends Model
     }
 
     /**
+     * Imagen de portada del componente, si la hay: la que subió el autor tiene
+     * prioridad sobre el thumbnail generado. Si devuelve null, el frontend
+     * renderiza el componente en vivo (gratuitos) o cae al placeholder.
+     */
+    public function previewImageUrl(): ?string
+    {
+        return $this->fileOfType(ComponentFileType::Preview)?->temporaryUrl()
+            ?? $this->thumbnail_url;
+    }
+
+    /**
      * ¿Puede `$user` acceder al código fuente? Solo el autor, quien lo haya
      * comprado, o cualquiera si el componente es gratuito.
      */

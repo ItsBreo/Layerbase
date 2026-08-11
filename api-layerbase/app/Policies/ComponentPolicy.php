@@ -69,4 +69,24 @@ class ComponentPolicy
     {
         return $component->userCanAccessSource($user);
     }
+
+    /**
+     * Renderizar el componente en el sandbox de la ficha pública.
+     *
+     * Se separa de `downloadSource` porque el visitante puede ser un invitado
+     * (de ahí el `?User`), pero la regla de fondo es la misma: el código solo
+     * viaja al navegador si es gratuito, propio o comprado. En un componente de
+     * pago el source ES el producto, así que ahí nunca hay render en vivo: la
+     * ficha cae a la imagen de portada.
+     */
+    public function previewSource(?User $user, Component $component): bool
+    {
+        // El componente tiene que ser visible: publicado, o del propio autor
+        // (que previsualiza sus borradores desde el studio).
+        if (! $component->isPublished() && ! $component->isOwnedBy($user)) {
+            return false;
+        }
+
+        return $component->userCanAccessSource($user);
+    }
 }

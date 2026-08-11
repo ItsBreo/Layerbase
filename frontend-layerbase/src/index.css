@@ -164,6 +164,18 @@
     font-family: var(--font-mono);
   }
 
+  /* Tailwind 4 dejó los botones con `cursor: default`. Se devuelve el puntero
+     aquí, en un único sitio, en vez de repetir `cursor-pointer` por cada botón
+     de la app. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
   /* Foco accesible coherente con el design system. */
   :focus-visible {
     outline: none;
@@ -174,6 +186,58 @@
   ::selection {
     background: var(--navy-200);
     color: var(--navy);
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   Controles con relieve — el único guiño físico del sistema.
+   Un degradado mínimo, un filo de luz arriba y hundimiento real al pulsar. Sin
+   biseles ni sombras internas marcadas: la marca es plana y precisa, así que el
+   relieve se queda en el umbral de lo perceptible. Se reserva a los botones que
+   ejecutan una acción (no a los contenedores ni a los conmutadores).
+   -------------------------------------------------------------------------- */
+@layer components {
+  .control-raised {
+    background-image: linear-gradient(to bottom, var(--surface), var(--bg));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      var(--shadow-card);
+  }
+
+  .control-raised:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 2px rgba(15, 15, 14, 0.12);
+  }
+
+  /* En oscuro la luz superior es apenas un velo: un blanco al 90% delataría el
+     truco sobre superficies navy. */
+  .dark .control-raised {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  .dark .control-raised:active {
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Variante sobre el acento, para el CTA principal. */
+  .control-raised-accent {
+    background-image: linear-gradient(to bottom, var(--accent), var(--accent-h));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.25),
+      var(--shadow-navy);
+  }
+
+  /* Mismo hover que el resto de CTA de la interfaz (Button primary): el acento
+     pasa a accent-hover. */
+  .control-raised-accent:hover {
+    background-image: linear-gradient(to bottom, var(--accent-h), var(--accent-h));
+  }
+
+  .control-raised-accent:active {
+    transform: translateY(1px);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
   }
 }
 

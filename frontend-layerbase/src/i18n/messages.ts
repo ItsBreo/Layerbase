@@ -187,6 +187,7 @@ export const messages = {
       loginToAccess: 'Inicia sesión para acceder',
       purchaseSoon: 'Las compras estarán disponibles pronto.',
       buyFor: 'Comprar por {price}',
+      livePreview: 'Render en vivo',
     },
     studio: {
       nav: 'Mis componentes',
@@ -227,6 +228,13 @@ export const messages = {
         sectionCode: 'Código',
         sectionReadme: 'README',
         sectionFiles: 'Archivos',
+        sectionCover: 'Portada',
+        coverLabel: 'Imagen de portada (opcional)',
+        coverHint:
+          'PNG, JPG o WebP, máx. 5 MB. Si no subes ninguna, tu componente se renderiza en vivo en la ficha.',
+        coverChoose: 'Elegir imagen',
+        coverRemove: 'Quitar',
+        coverTooLarge: 'La imagen supera los 5 MB.',
         name: 'Nombre',
         namePlaceholder: 'ej. Button Group, Auth Form, Data Table…',
         description: 'Descripción',
@@ -473,6 +481,7 @@ export const messages = {
       loginToAccess: 'Sign in to access',
       purchaseSoon: 'Purchases will be available soon.',
       buyFor: 'Buy for {price}',
+      livePreview: 'Live render',
     },
     studio: {
       nav: 'My components',
@@ -513,6 +522,13 @@ export const messages = {
         sectionCode: 'Code',
         sectionReadme: 'README',
         sectionFiles: 'Files',
+        sectionCover: 'Cover',
+        coverLabel: 'Cover image (optional)',
+        coverHint:
+          'PNG, JPG or WebP, 5 MB max. If you skip it, your component renders live on its page.',
+        coverChoose: 'Choose image',
+        coverRemove: 'Remove',
+        coverTooLarge: 'The image is larger than 5 MB.',
         name: 'Name',
         namePlaceholder: 'e.g. Button Group, Auth Form, Data Table…',
         description: 'Description',

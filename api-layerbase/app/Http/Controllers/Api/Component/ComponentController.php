@@ -31,9 +31,11 @@ class ComponentController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
+        // `files` se carga para poder resolver la portada (preview_url) de cada
+        // tarjeta sin una query por componente.
         $query = Component::query()
             ->published()
-            ->with(['author', 'category', 'tags']);
+            ->with(['author', 'category', 'tags', 'files']);
 
         $this->applyFilters($query, $request);
         $this->applySorting($query, $request);
@@ -132,7 +134,7 @@ class ComponentController extends Controller
     public function my(Request $request): AnonymousResourceCollection
     {
         $query = $request->user()->components()
-            ->with(['category', 'tags'])
+            ->with(['category', 'tags', 'files'])
             ->latest();
 
         if ($request->filled('status')) {
@@ -213,7 +215,9 @@ class ComponentController extends Controller
             'rating' => $query->orderByDesc('rating_avg'),
             'downloads' => $query->orderByDesc('downloads'),
             'oldest' => $query->orderBy('published_at')->orderBy('id'),
-            default => $query->orderBy('published_at')->orderBy('id'),
+            // Por defecto, lo más reciente primero: es lo que espera quien entra
+            // a un marketplace sin filtrar nada.
+            default => $query->orderByDesc('published_at')->orderByDesc('id'),
         };
     }
 

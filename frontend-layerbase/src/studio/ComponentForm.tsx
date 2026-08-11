@@ -9,15 +9,15 @@
  * En modo edición, si el componente está publicado el formulario se bloquea:
  * hay que despublicarlo antes de poder editarlo (regla de la ComponentPolicy).
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Eye, Loader2 } from 'lucide-react'
+import { ArrowLeft, Eye, Image as ImageIcon, Loader2, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/Button'
-import { Input, Select, Textarea } from '@/components/ui/Field'
+import { FieldShell, Input, Select, Textarea } from '@/components/ui/Field'
 import { StatusBadge } from '@/components/ui/Badge'
 import { getErrorMessage } from '@/lib/api'
 import { useI18n } from '@/i18n/useI18n'
@@ -57,6 +57,9 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
 
   const [code, setCode] = useState('')
   const [readme, setReadme] = useState('')
+  // Imagen de portada opcional: si el autor no la sube, la ficha renderiza el
+  // componente en vivo en el sandbox.
+  const [cover, setCover] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const {
@@ -129,6 +132,9 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
       }
       if (readme.trim()) {
         await componentsApi.uploadFile(component.slug, readmeToFile(readme), 'readme')
+      }
+      if (cover) {
+        await componentsApi.uploadFile(component.slug, cover, 'preview')
       }
 
       void qc.invalidateQueries({ queryKey: componentKeys.all })
@@ -307,6 +313,15 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
             />
           </Section>
 
+          {/* Portada */}
+          <Section title={t('studio.form.sectionCover')}>
+            <CoverField
+              file={cover}
+              existingUrl={existing?.preview_url ?? existing?.thumbnail_url ?? null}
+              onSelect={setCover}
+            />
+          </Section>
+
           {/* Acciones */}
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-6">
             <Button type="button" variant="ghost" onClick={() => navigate('/studio')}>
@@ -329,6 +344,92 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
         </form>
       </main>
     </AppShell>
+  )
+}
+
+/** Límite de la subida, igual que el del backend (UploadComponentFileRequest). */
+const MAX_COVER_BYTES = 5 * 1024 * 1024
+
+/**
+ * Imagen de portada, opcional. Es un override: si el autor sube una, manda
+ * sobre el render en vivo del sandbox en la ficha pública.
+ *
+ * Nota: "Quitar" solo descarta la selección local; para borrar una portada ya
+ * subida hay que reemplazarla (el backend no expone borrado de archivos).
+ */
+function CoverField({
+  file,
+  existingUrl,
+  onSelect,
+}: {
+  file: File | null
+  existingUrl: string | null
+  onSelect: (file: File | null) => void
+}) {
+  const { t } = useI18n()
+  const [error, setError] = useState<string | null>(null)
+
+  const objectUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
+  useEffect(() => {
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+    }
+  }, [objectUrl])
+
+  const src = objectUrl ?? existingUrl
+
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = event.target.files?.[0] ?? null
+    if (picked && picked.size > MAX_COVER_BYTES) {
+      setError(t('studio.form.coverTooLarge'))
+      onSelect(null)
+      return
+    }
+    setError(null)
+    onSelect(picked)
+  }
+
+  return (
+    <FieldShell
+      label={t('studio.form.coverLabel')}
+      hint={t('studio.form.coverHint')}
+      error={error ?? undefined}
+    >
+      <div className="flex flex-wrap items-center gap-4">
+        {src ? (
+          <img
+            src={src}
+            alt=""
+            className="h-24 w-40 rounded-md border border-border object-cover"
+          />
+        ) : (
+          <div className="grid h-24 w-40 place-items-center rounded-md border border-dashed border-border text-muted">
+            <ImageIcon className="size-5" />
+          </div>
+        )}
+        <div className="space-y-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-text transition hover:border-accent/40 hover:text-accent">
+            <Upload className="size-4" />
+            {t('studio.form.coverChoose')}
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              onChange={handleChange}
+            />
+          </label>
+          {file && (
+            <button
+              type="button"
+              onClick={() => onSelect(null)}
+              className="block text-xs text-muted transition hover:text-danger"
+            >
+              {t('studio.form.coverRemove')}
+            </button>
+          )}
+        </div>
+      </div>
+    </FieldShell>
   )
 }
 

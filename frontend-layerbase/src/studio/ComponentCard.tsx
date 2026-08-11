@@ -3,8 +3,11 @@
  *
  * - Sin sombra en reposo; en hover eleva (translateY(-2px) + shadow-hover) y
  *   tiñe el borde de navy-200 — el look "premium y preciso" de la marca.
- * - Si no hay thumbnail, genera un placeholder con degradado determinista a
- *   partir del slug, con altura variable para el efecto mansonry.
+ * - La portada es `preview_url` (imagen subida por el autor, resuelta ya en el
+ *   backend). En la rejilla no se monta el sandbox: renderizar N componentes en
+ *   vivo no es viable, así que sin imagen se cae al placeholder.
+ * - El placeholder es un degradado determinista a partir del slug, con altura
+ *   variable para el efecto masonry.
  */
 import { Link } from 'react-router-dom'
 import { Download, Star } from 'lucide-react'
@@ -33,6 +36,7 @@ function Placeholder({ component }: { component: Component }) {
 export function ComponentCard({ component }: { component: Component }) {
   const { t } = useI18n()
   const rating = component.rating_avg ? Number.parseFloat(component.rating_avg) : null
+  const cover = component.preview_url ?? component.thumbnail_url
 
   return (
     <Link
@@ -43,9 +47,9 @@ export function ComponentCard({ component }: { component: Component }) {
       )}
     >
       {/* Media */}
-      {component.thumbnail_url ? (
+      {cover ? (
         <img
-          src={component.thumbnail_url}
+          src={cover}
           alt={component.title}
           loading="lazy"
           className="w-full object-cover"
@@ -92,7 +96,9 @@ export function ComponentCard({ component }: { component: Component }) {
                 {component.author.name.charAt(0).toUpperCase()}
               </span>
             )}
-            <span className="truncate text-xs text-muted">{component.author.name}</span>
+            <span className="truncate font-display text-xs font-semibold text-muted">
+              {component.author.name}
+            </span>
           </div>
         )}
       </div>

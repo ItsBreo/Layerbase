@@ -39,6 +39,13 @@ class ComponentResource extends JsonResource
             'rating_avg' => $this->rating_avg,
             'rating_count' => $this->rating_count,
             'thumbnail_url' => $this->thumbnail_url,
+            // Portada resuelta (imagen del autor > thumbnail). Solo si los
+            // archivos están cargados; si es null el frontend decide entre
+            // render en vivo y placeholder.
+            'preview_url' => $this->when(
+                $this->relationLoaded('files'),
+                fn () => $this->previewImageUrl(),
+            ),
             'published_at' => $this->published_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

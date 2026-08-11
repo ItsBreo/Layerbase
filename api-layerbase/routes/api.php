@@ -84,6 +84,13 @@ Route::prefix('components')->group(function () {
         ->middleware('auth.optional')
         ->name('components.index');
 
+    // Código para el render en sandbox de la ficha. Público con auth opcional:
+    // la policy `previewSource` solo lo sirve si el componente es gratuito
+    // (o propio/comprado). No cuenta como descarga.
+    Route::get('{component}/preview-code', [ComponentFileController::class, 'previewCode'])
+        ->middleware('auth.optional')
+        ->name('components.preview-code');
+
     // --- Autor autenticado ---
     // Nota: `my` y las rutas fijas se declaran ANTES del comodín {component}
     // para que no las capture como slug.

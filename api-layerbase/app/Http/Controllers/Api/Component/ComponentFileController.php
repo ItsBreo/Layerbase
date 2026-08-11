@@ -59,4 +59,28 @@ class ComponentFileController extends Controller
             'expires_in' => (int) config('components.download_url_ttl', 5) * 60,
         ]);
     }
+
+    /**
+     * GET /components/{component}/preview-code — URL firmada del source para
+     * renderizarlo en el sandbox de la ficha pública.
+     *
+     * Deliberadamente separado de `download`: la autorización es distinta
+     * (policy `previewSource`, que admite invitados en los componentes
+     * gratuitos) y una previsualización NO cuenta como descarga en las
+     * métricas del autor.
+     */
+    public function previewCode(Component $component): JsonResponse
+    {
+        $this->authorize('previewSource', $component);
+
+        $source = $component->fileOfType(ComponentFileType::Source);
+
+        abort_if($source === null, 404, 'Este componente no tiene código que previsualizar.');
+
+        return response()->json([
+            'url' => $source->temporaryUrl(),
+            'filename' => $source->filename,
+            'expires_in' => (int) config('components.download_url_ttl', 5) * 60,
+        ]);
+    }
 }

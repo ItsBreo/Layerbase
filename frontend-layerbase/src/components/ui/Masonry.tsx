@@ -46,19 +46,21 @@ export function Masonry<T>({
 }: {
   items: T[]
   getKey: (item: T) => string | number
-  renderItem: (item: T) => React.ReactNode
+  /** `index` es la posición en la lista original, no en la columna: sirve para
+   *  escalonar animaciones de entrada respetando el orden de lectura. */
+  renderItem: (item: T, index: number) => React.ReactNode
   className?: string
 }) {
   const cols = useColumnCount()
-  const columns: T[][] = Array.from({ length: cols }, () => [])
-  items.forEach((item, i) => columns[i % cols].push(item))
+  const columns: { item: T; index: number }[][] = Array.from({ length: cols }, () => [])
+  items.forEach((item, i) => columns[i % cols].push({ item, index: i }))
 
   return (
     <div className={cn('flex items-start gap-4', className)}>
       {columns.map((column, ci) => (
         <div key={ci} className="flex min-w-0 flex-1 flex-col gap-4">
-          {column.map((item) => (
-            <div key={getKey(item)}>{renderItem(item)}</div>
+          {column.map(({ item, index }) => (
+            <div key={getKey(item)}>{renderItem(item, index)}</div>
           ))}
         </div>
       ))}

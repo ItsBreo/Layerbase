@@ -16,6 +16,7 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api'
 import { useI18n } from '@/i18n/useI18n'
 import { catalogApi, componentsApi, type ComponentFilters } from '@/studio/api'
+import { unzipFirstTextFile } from '@/studio/zip'
 import type {
   Component,
   ComponentFileType,
@@ -31,6 +32,7 @@ export const componentKeys = {
   explore: (filters: ComponentFilters) => ['components', 'explore', filters] as const,
   mine: (status?: ComponentStatus) => ['components', 'mine', status ?? 'all'] as const,
   detail: (idOrSlug: string | number) => ['components', 'detail', idOrSlug] as const,
+  previewCode: (idOrSlug: string | number) => ['components', 'preview-code', idOrSlug] as const,
   categories: (stack?: Stack) => ['categories', stack ?? 'all'] as const,
   tags: (q?: string) => ['tags', q ?? ''] as const,
 }
@@ -67,6 +69,32 @@ export function useComponent(idOrSlug: string | number | undefined) {
     queryKey: componentKeys.detail(idOrSlug ?? ''),
     queryFn: () => componentsApi.get(idOrSlug as string | number),
     enabled: idOrSlug != null && idOrSlug !== '',
+  })
+}
+
+/**
+ * Código listo para el sandbox: pide la URL firmada, descarga el ZIP y extrae
+ * el texto. Lo comparten la vista previa del autor y la ficha pública, así que
+ * el resultado se cachea por slug.
+ *
+ * `enabled` lo decide quien llama (React sigue exigiendo que el hook se invoque
+ * siempre): en la ficha solo tiene sentido si el componente es React, tiene
+ * código y el espectador puede acceder a él.
+ */
+export function usePreviewCode(idOrSlug: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: componentKeys.previewCode(idOrSlug ?? ''),
+    queryFn: async () => {
+      const { url } = await componentsApi.previewCode(idOrSlug as string)
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('No se pudo descargar el código del componente.')
+      return unzipFirstTextFile(await res.arrayBuffer())
+    },
+    // Un 403 (componente de pago) no se reintenta: la respuesta no va a cambiar.
+    retry: false,
+    // La URL firmada caduca en 5 min, pero el código ya extraído no: se cachea.
+    staleTime: 1000 * 60 * 10,
+    enabled: enabled && idOrSlug != null && idOrSlug !== '',
   })
 }
 

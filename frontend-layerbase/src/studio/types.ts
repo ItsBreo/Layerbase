@@ -57,6 +57,9 @@ export interface Component {
   rating_avg: string | null
   rating_count: number
   thumbnail_url: string | null
+  /** Portada ya resuelta por el backend (imagen del autor > thumbnail).
+   *  Solo presente si el endpoint cargó los archivos. */
+  preview_url?: string | null
   published_at: string | null
   created_at: string
   updated_at: string
