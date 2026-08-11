@@ -30,6 +30,9 @@ use Laravel\Sanctum\HasApiTokens;
     'twitter_username',
     'github_oauth_id',
     'google_oauth_id',
+    // Preferencia del propio usuario, no un privilegio: decide si su resumen
+    // de autor es visible para terceros.
+    'stats_public',
 ])]
 #[Hidden(['password', 'remember_token', 'github_oauth_id', 'google_oauth_id'])]
 class User extends Authenticatable
@@ -48,6 +51,8 @@ class User extends Authenticatable
         'role' => UserRole::User->value,
         'banned' => false,
         'stripe_onboarded' => false,
+        // El resumen de autor nace privado; publicarlo es una decisión activa.
+        'stats_public' => false,
     ];
 
     /**
@@ -63,6 +68,7 @@ class User extends Authenticatable
             'role' => UserRole::class,
             'banned' => 'boolean',
             'stripe_onboarded' => 'boolean',
+            'stats_public' => 'boolean',
         ];
     }
 
@@ -87,5 +93,46 @@ class User extends Authenticatable
     {
         // Los admin también pueden actuar como autores.
         return $this->hasRole(UserRole::Author) || $this->isAdmin();
+    }
+
+    /**
+     * ¿Tiene contraseña local? Las cuentas creadas por OAuth no la tienen, así
+     * que para ellas no aplica el cambio de contraseña.
+     */
+    public function hasPassword(): bool
+    {
+        return $this->password !== null;
+    }
+
+    /**
+     * Resumen de autor, calculado sobre los componentes PUBLICADOS.
+     *
+     * Es una agregación en una sola query, no una carga de la relación: este
+     * método solo se llama desde la página de perfil, nunca desde un listado.
+     * La media de valoración se pondera por número de reseñas para que un
+     * componente con una sola estrella no pese lo mismo que uno con cien.
+     *
+     * @return array{components: int, downloads: int, rating_avg: float|null, rating_count: int}
+     */
+    public function authorStats(): array
+    {
+        $row = $this->components()
+            ->published()
+            ->selectRaw('COUNT(*) as components')
+            ->selectRaw('COALESCE(SUM(downloads), 0) as downloads')
+            ->selectRaw('COALESCE(SUM(rating_avg * rating_count), 0) as rating_sum')
+            ->selectRaw('COALESCE(SUM(rating_count), 0) as rating_count')
+            ->first();
+
+        $ratingCount = (int) ($row->rating_count ?? 0);
+
+        return [
+            'components' => (int) ($row->components ?? 0),
+            'downloads' => (int) ($row->downloads ?? 0),
+            'rating_avg' => $ratingCount > 0
+                ? round(((float) $row->rating_sum) / $ratingCount, 2)
+                : null,
+            'rating_count' => $ratingCount,
+        ];
     }
 }

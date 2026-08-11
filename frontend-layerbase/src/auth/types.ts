@@ -23,6 +23,36 @@ export interface User {
   ban_reason?: string | null
   email_verified_at: string | null
   created_at: string
+  /** Ajuste propio: ¿el resumen de autor es visible para terceros? */
+  stats_public?: boolean
+  /** false en cuentas creadas por OAuth (no tienen contraseña local). */
+  has_password?: boolean
+  /** Solo lo devuelven los endpoints de perfil, nunca los listados. */
+  stats?: AuthorStats
+}
+
+/** Resumen de autor, calculado sobre los componentes publicados. */
+export interface AuthorStats {
+  components: number
+  downloads: number
+  rating_avg: number | null
+  rating_count: number
+}
+
+/** Campos editables del perfil público. */
+export interface UpdateProfilePayload {
+  name?: string
+  bio?: string | null
+  website?: string | null
+  github_username?: string | null
+  twitter_username?: string | null
+  stats_public?: boolean
+}
+
+export interface UpdatePasswordPayload {
+  current_password: string
+  password: string
+  password_confirmation: string
 }
 
 /** Estado de la sesión: arrancando, invitado o autenticado. */

@@ -18,12 +18,33 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class UserResource extends JsonResource
 {
     /**
+     * ¿Se adjunta el resumen de autor? Está APAGADO por defecto a propósito:
+     * calcularlo cuesta una query, y este recurso se serializa una vez por
+     * tarjeta en los listados de componentes. Solo lo encienden los endpoints
+     * de perfil, vía `withStats()`.
+     */
+    protected bool $withStats = false;
+
+    /** Instancia que sí incluye el resumen de autor. */
+    public static function withStats(User $user): static
+    {
+        $resource = new static($user);
+        $resource->withStats = true;
+
+        return $resource;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
         $viewer = $request->user();
-        $canSeeModeration = $viewer?->isAdmin() || $viewer?->is($this->resource);
+        $isSelf = (bool) $viewer?->is($this->resource);
+        $canSeeModeration = $viewer?->isAdmin() || $isSelf;
+        // El resumen es privado salvo que su dueño lo publique; él y los admin
+        // lo ven siempre.
+        $canSeeStats = $canSeeModeration || $this->stats_public;
 
         return [
             'id' => $this->id,
@@ -40,6 +61,16 @@ class UserResource extends JsonResource
             'ban_reason' => $this->when($canSeeModeration, $this->ban_reason),
             'email_verified_at' => $this->email_verified_at,
             'created_at' => $this->created_at,
+
+            // Ajuste del propio usuario; a terceros no les incumbe.
+            'stats_public' => $this->when($canSeeModeration, (bool) $this->stats_public),
+            // Las cuentas de OAuth no tienen contraseña local: el frontend usa
+            // esto para no ofrecerles el formulario de cambio.
+            'has_password' => $this->when($isSelf, fn () => $this->hasPassword()),
+            'stats' => $this->when(
+                $this->withStats && $canSeeStats,
+                fn () => $this->authorStats(),
+            ),
         ];
     }
 }

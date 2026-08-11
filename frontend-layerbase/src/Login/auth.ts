@@ -9,6 +9,8 @@ import type {
   LoginCredentials,
   OAuthProvider,
   RegisterPayload,
+  UpdatePasswordPayload,
+  UpdateProfilePayload,
   User,
 } from '@/auth/types'
 
@@ -33,6 +35,28 @@ export const authApi = {
   /** Devuelve el usuario autenticado actual (requiere token). */
   async me(): Promise<User> {
     const { data } = await api.get<User>('/auth/me')
+    return data
+  },
+
+  /** Actualiza el perfil público del usuario autenticado. */
+  async updateProfile(payload: UpdateProfilePayload): Promise<User> {
+    const { data } = await api.patch<User>('/auth/profile', payload)
+    return data
+  },
+
+  /** Cambia la contraseña (exige la actual). Revoca el resto de sesiones. */
+  async updatePassword(payload: UpdatePasswordPayload): Promise<{ message: string }> {
+    const { data } = await api.put<{ message: string }>('/auth/password', payload)
+    return data
+  },
+
+  /** Sube (o reemplaza) la foto de perfil. */
+  async updateAvatar(file: File): Promise<User> {
+    const form = new FormData()
+    form.append('avatar', file)
+    const { data } = await api.post<User>('/auth/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return data
   },
 

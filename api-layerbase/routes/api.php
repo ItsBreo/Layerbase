@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Component\ComponentController;
 use App\Http\Controllers\Api\Component\ComponentFileController;
 use App\Http\Controllers\Api\Component\ComponentStateController;
 use App\Http\Controllers\Api\Component\TagController;
+use App\Http\Controllers\Api\Profile\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -43,6 +44,14 @@ Route::prefix('auth')->group(function () {
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('me', [AuthSessionController::class, 'me'])->name('auth.me');
         Route::post('logout', [AuthSessionController::class, 'destroy'])->name('auth.logout');
+
+        // Perfil del propio usuario. Sin parámetro de usuario en la ruta: se
+        // opera siempre sobre el autenticado.
+        Route::patch('profile', [ProfileController::class, 'update'])->name('auth.profile.update');
+        Route::post('avatar', [ProfileController::class, 'updateAvatar'])->name('auth.avatar.update');
+        Route::put('password', [ProfileController::class, 'updatePassword'])
+            ->middleware('throttle:auth')
+            ->name('auth.password.update');
     });
 });
 

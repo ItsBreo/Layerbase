@@ -50,10 +50,13 @@ class AuthSessionController extends Controller
         ]);
     }
 
-    /** Devuelve el usuario autenticado actual. */
+    /**
+     * Devuelve el usuario autenticado actual, con su resumen de autor: es la
+     * fuente que alimenta la página de perfil.
+     */
     public function me(Request $request): UserResource
     {
-        return new UserResource($request->user());
+        return UserResource::withStats($request->user());
     }
 
     /** Cierra la sesión revocando únicamente el token usado en esta petición. */
