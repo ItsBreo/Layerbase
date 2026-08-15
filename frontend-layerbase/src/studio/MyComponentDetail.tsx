@@ -15,8 +15,10 @@ import {
   FileText,
   Gift,
   Pencil,
+  RotateCcw,
   Send,
   Star,
+  TriangleAlert,
   Trash2,
   TrendingUp,
   Undo2,
@@ -34,6 +36,7 @@ import { componentsApi } from '@/studio/api'
 import {
   useComponent,
   useDeleteComponent,
+  useRevertComponent,
   useSubmitComponent,
   useUnpublishComponent,
 } from '@/studio/hooks'
@@ -47,6 +50,7 @@ export default function MyComponentDetail() {
   const { data: component, isLoading } = useComponent(slug)
 
   const submit = useSubmitComponent()
+  const revert = useRevertComponent()
   const unpublish = useUnpublishComponent()
   const remove = useDeleteComponent()
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -76,6 +80,10 @@ export default function MyComponentDetail() {
 
   const canEdit = component.status === 'draft' || component.status === 'rejected'
   const canUnpublish = component.status === 'published'
+  // `submit` SOLO es legal desde borrador: desde `rejected` el backend
+  // devuelve 422 porque la única transición permitida es volver a draft.
+  const canSubmit = component.status === 'draft'
+  const canRevert = component.status === 'rejected' || component.status === 'unpublished'
 
   const handleDownload = async () => {
     setDownloading(true)
@@ -126,6 +134,26 @@ export default function MyComponentDetail() {
           </div>
         </motion.div>
 
+        {/* Motivo del rechazo. Solo llega en la respuesta si el espectador es
+            el autor o un admin, así que aquí siempre es legítimo mostrarlo. */}
+        {component.status === 'rejected' && component.rejection_reason && (
+          <motion.div
+            variants={fadeUpItem}
+            className="mt-6 rounded-lg border border-danger/30 bg-danger/5 p-4"
+          >
+            <div className="flex items-start gap-3">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text">{t('studio.rejected.title')}</p>
+                <p className="mt-1.5 whitespace-pre-line text-sm text-muted">
+                  {component.rejection_reason}
+                </p>
+                <p className="mt-2 text-xs text-muted">{t('studio.rejected.cta')}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {/* Acciones */}
         <motion.div variants={fadeUpItem} className="mt-6 flex flex-wrap gap-2">
           {canEdit && (
@@ -135,7 +163,7 @@ export default function MyComponentDetail() {
               </Button>
             </Link>
           )}
-          {canEdit && (
+          {canSubmit && (
             <Button
               variant="primary"
               size="sm"
@@ -144,6 +172,17 @@ export default function MyComponentDetail() {
               icon={<Send className="size-3.5" />}
             >
               {t('studio.actions.submit')}
+            </Button>
+          )}
+          {canRevert && (
+            <Button
+              variant="primary"
+              size="sm"
+              loading={revert.isPending}
+              onClick={() => revert.mutate(component.slug)}
+              icon={<RotateCcw className="size-3.5" />}
+            >
+              {t('studio.actions.revert')}
             </Button>
           )}
           {component.stack === 'react' && (

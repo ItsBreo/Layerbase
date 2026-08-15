@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Download, Package, Pencil, Plus, Send, Trash2, Undo2 } from 'lucide-react'
+import { Download, Package, Pencil, Plus, RotateCcw, Send, Trash2, Undo2 } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { Button } from '@/components/ui/Button'
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 import {
   useDeleteComponent,
   useMyComponents,
+  useRevertComponent,
   useSubmitComponent,
   useUnpublishComponent,
 } from '@/studio/hooks'
@@ -119,13 +120,17 @@ function StatusFilterChip({
 function ComponentRow({ component }: { component: Component }) {
   const { t } = useI18n()
   const submit = useSubmitComponent()
+  const revert = useRevertComponent()
   const unpublish = useUnpublishComponent()
   const remove = useDeleteComponent()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmUnpublish, setConfirmUnpublish] = useState(false)
 
   const canEdit = component.status === 'draft' || component.status === 'rejected'
-  const canSubmit = canEdit
+  // `submit` SOLO es legal desde borrador. Desde `rejected` hay que pasar por
+  // `revert` primero, o el backend responde 422.
+  const canSubmit = component.status === 'draft'
+  const canRevert = component.status === 'rejected' || component.status === 'unpublished'
   const canUnpublish = component.status === 'published'
 
   return (
@@ -166,6 +171,17 @@ function ComponentRow({ component }: { component: Component }) {
               icon={<Send className="size-3.5" />}
             >
               {t('studio.actions.submit')}
+            </Button>
+          )}
+          {canRevert && (
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={revert.isPending}
+              onClick={() => revert.mutate(component.slug)}
+              icon={<RotateCcw className="size-3.5" />}
+            >
+              {t('studio.actions.revert')}
             </Button>
           )}
           {canEdit && (

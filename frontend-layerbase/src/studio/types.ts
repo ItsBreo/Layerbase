@@ -61,6 +61,9 @@ export interface Component {
    *  Solo presente si el endpoint cargó los archivos. */
   preview_url?: string | null
   published_at: string | null
+  /** Motivo del último rechazo. El backend solo lo envía al autor y a los
+   *  admin, así que en la ficha pública llega `undefined`. */
+  rejection_reason?: string | null
   created_at: string
   updated_at: string
 
@@ -113,6 +116,9 @@ export interface DownloadResponse {
 }
 
 export const STACKS: Stack[] = ['react', 'angular', 'vanilla']
+
+/** Contadores por estado que alimentan las pestañas del panel de moderación. */
+export type ModerationCounts = Record<ComponentStatus, number>
 
 export const COMPONENT_STATUSES: ComponentStatus[] = [
   'draft',

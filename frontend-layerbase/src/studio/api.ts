@@ -16,6 +16,7 @@ import type {
   ComponentStatus,
   CreateComponentPayload,
   DownloadResponse,
+  ModerationCounts,
   Paginated,
   Stack,
   Tag,
@@ -99,6 +100,18 @@ export const componentsApi = {
     return data.data
   },
 
+  /**
+   * Devuelve a borrador (rejected | unpublished → draft). Es el paso que
+   * permite reenviar a revisión un componente rechazado: desde `rejected` el
+   * backend no acepta `submit` directamente.
+   */
+  async revert(idOrSlug: string | number): Promise<Component> {
+    const { data } = await api.post<{ message: string; data: Component }>(
+      `/components/${idOrSlug}/revert`,
+    )
+    return data.data
+  },
+
   /** Sube (o reemplaza) un archivo. Multipart; el interceptor de axios respeta
    *  el Content-Type de FormData. */
   async uploadFile(
@@ -132,6 +145,47 @@ export const componentsApi = {
   async previewCode(idOrSlug: string | number): Promise<DownloadResponse> {
     const { data } = await api.get<DownloadResponse>(`/components/${idOrSlug}/preview-code`)
     return data
+  },
+}
+
+/**
+ * Moderación (panel de admin). Cuelga de `/admin`, protegido por `role:admin`
+ * en el backend: un autor que llame aquí recibe 403.
+ *
+ * `approve` y `reject` son las ÚNICAS vías por las que un componente llega a
+ * `published`. Están separadas de `submit` a propósito: el autor pide revisión,
+ * el admin la resuelve.
+ */
+export const moderationApi = {
+  /** Cola por estado (por defecto `pending_review`), más antiguos primero. */
+  async queue(
+    params: { status?: ComponentStatus; page?: number; per_page?: number } = {},
+  ): Promise<Paginated<Component>> {
+    const { data } = await api.get<Paginated<Component>>('/admin/components', { params })
+    return data
+  },
+
+  /** Contadores de todos los estados en una sola petición. */
+  async counts(): Promise<ModerationCounts> {
+    const { data } = await api.get<{ data: ModerationCounts }>('/admin/components/counts')
+    return data.data
+  },
+
+  /** Aprueba y publica (pending_review → published). */
+  async approve(idOrSlug: string | number): Promise<Component> {
+    const { data } = await api.post<{ message: string; data: Component }>(
+      `/admin/components/${idOrSlug}/approve`,
+    )
+    return data.data
+  },
+
+  /** Rechaza con motivo (pending_review → rejected). El motivo es obligatorio. */
+  async reject(idOrSlug: string | number, reason: string): Promise<Component> {
+    const { data } = await api.post<{ message: string; data: Component }>(
+      `/admin/components/${idOrSlug}/reject`,
+      { reason },
+    )
+    return data.data
   },
 }
 

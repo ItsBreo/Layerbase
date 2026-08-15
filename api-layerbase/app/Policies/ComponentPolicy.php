@@ -64,6 +64,26 @@ class ComponentPolicy
         return $component->isOwnedBy($user);
     }
 
+    /** Volver a borrador tras un rechazo o una despublicación: autor propietario. */
+    public function revert(User $user, Component $component): bool
+    {
+        return $component->isOwnedBy($user);
+    }
+
+    /**
+     * Moderar (aprobar o rechazar): SOLO admin. El autor no puede publicarse a
+     * sí mismo, que es justo lo que separa `submit` de `approve`.
+     *
+     * En la práctica `before()` ya corta en true para los admin y este cuerpo
+     * no llega a evaluarse, pero se deja explícito: si algún día se acota el
+     * atajo global, la regla real sigue escrita aquí y no se abre un agujero
+     * por omisión.
+     */
+    public function moderate(User $user, Component $component): bool
+    {
+        return $user->isAdmin();
+    }
+
     /** Descargar el código fuente: delega en la regla de dominio del modelo. */
     public function downloadSource(User $user, Component $component): bool
     {

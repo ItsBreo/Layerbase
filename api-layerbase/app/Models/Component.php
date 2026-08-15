@@ -146,6 +146,33 @@ class Component extends Model
     public function submitForReview(): void
     {
         $this->status = ComponentStatus::PendingReview;
+        // El motivo del rechazo anterior deja de aplicar en cuanto el autor
+        // reenvía: si no se limpia, la ficha seguiría mostrando una queja ya
+        // corregida.
+        $this->rejection_reason = null;
+        $this->save();
+    }
+
+    /**
+     * pending_review → published. Aprobación de un admin: es el ÚNICO camino
+     * por el que un componente se hace visible en el marketplace.
+     */
+    public function approve(): void
+    {
+        $this->status = ComponentStatus::Published;
+        $this->published_at = now();
+        $this->rejection_reason = null;
+        $this->save();
+    }
+
+    /**
+     * pending_review → rejected. El motivo es obligatorio: un rechazo sin
+     * explicación deja al autor sin nada que corregir.
+     */
+    public function reject(string $reason): void
+    {
+        $this->status = ComponentStatus::Rejected;
+        $this->rejection_reason = $reason;
         $this->save();
     }
 
@@ -153,6 +180,21 @@ class Component extends Model
     public function unpublish(): void
     {
         $this->status = ComponentStatus::Unpublished;
+        $this->published_at = null;
+        $this->save();
+    }
+
+    /**
+     * rejected|unpublished → draft. Cierra el ciclo de moderación: desde
+     * `rejected` el enum solo permite volver a borrador, así que sin esto un
+     * componente rechazado se queda atrapado (no se puede reenviar a revisión
+     * directamente). El motivo del rechazo se conserva hasta el reenvío, que es
+     * cuando deja de aplicar, para que el autor lo tenga delante mientras
+     * corrige.
+     */
+    public function revertToDraft(): void
+    {
+        $this->status = ComponentStatus::Draft;
         $this->published_at = null;
         $this->save();
     }

@@ -47,6 +47,14 @@ class ComponentResource extends JsonResource
                 fn () => $this->previewImageUrl(),
             ),
             'published_at' => $this->published_at,
+            // Motivo del rechazo: solo para quien tiene que actuar sobre él (su
+            // autor) o resolverlo (admin). No se filtra a terceros aunque el
+            // componente acabe siendo visible más adelante: por qué se tumbó una
+            // versión anterior no es información pública.
+            'rejection_reason' => $this->when(
+                $this->isOwnedBy($viewer) || (bool) $viewer?->isAdmin(),
+                fn () => $this->rejection_reason,
+            ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 

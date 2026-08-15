@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\ModerationController;
 use App\Http\Controllers\Api\Auth\AuthSessionController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Auth\RegisterController;
@@ -65,6 +66,18 @@ Route::prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('ping', fn () => response()->json(['message' => 'admin ok']))->name('admin.ping');
+
+        // --- Moderación ---
+        // Cola de revisión (lectura) + las dos transiciones que solo un admin
+        // puede ejecutar. Van aquí, y no junto al resto de estados, para que la
+        // frontera de autorización se vea en la URL: nada bajo /admin lo toca
+        // un autor. La policy `moderate` lo vuelve a comprobar igualmente.
+        Route::get('components', [ModerationController::class, 'index'])->name('admin.components.index');
+        Route::get('components/counts', [ModerationController::class, 'counts'])->name('admin.components.counts');
+        Route::post('components/{component}/approve', [ComponentStateController::class, 'approve'])
+            ->name('admin.components.approve');
+        Route::post('components/{component}/reject', [ComponentStateController::class, 'reject'])
+            ->name('admin.components.reject');
     });
 
     Route::middleware('role:author')->prefix('author')->group(function () {
@@ -112,6 +125,9 @@ Route::prefix('components')->group(function () {
         // Máquina de estados de moderación.
         Route::post('{component}/submit', [ComponentStateController::class, 'submit'])->name('components.submit');
         Route::post('{component}/unpublish', [ComponentStateController::class, 'unpublish'])->name('components.unpublish');
+        // Vuelta a borrador tras un rechazo o una despublicación: sin esto un
+        // componente rechazado no tendría manera de volver a revisión.
+        Route::post('{component}/revert', [ComponentStateController::class, 'revert'])->name('components.revert');
 
         // Archivos: subida y descarga protegida del código fuente.
         Route::post('{component}/files', [ComponentFileController::class, 'store'])->name('components.files.store');

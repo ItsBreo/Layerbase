@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Component;
 use App\Enums\ComponentFileType;
 use App\Enums\ComponentStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Component\RejectComponentRequest;
 use App\Http\Resources\ComponentResource;
 use App\Models\Component;
 use Illuminate\Http\JsonResponse;
@@ -46,6 +47,45 @@ class ComponentStateController extends Controller
     }
 
     /**
+     * POST /admin/components/{component}/approve — pending_review → published.
+     *
+     * Único camino por el que un componente se hace visible en el marketplace.
+     * Reservado a admin (policy `moderate`): que el autor pueda pedir revisión
+     * pero no aprobarse es justo la razón de que `submit` y `approve` sean dos
+     * endpoints distintos.
+     */
+    public function approve(Component $component): JsonResponse
+    {
+        $this->authorize('moderate', $component);
+
+        $this->assertCanTransition($component, ComponentStatus::Published);
+
+        $component->approve();
+
+        // TODO(notificaciones): avisar al autor de que su componente está
+        // publicado (módulo de notificaciones, semana posterior).
+
+        return $this->respond($component, 'Componente aprobado y publicado.');
+    }
+
+    /**
+     * POST /admin/components/{component}/reject — pending_review → rejected.
+     * El motivo es obligatorio (ver RejectComponentRequest).
+     */
+    public function reject(RejectComponentRequest $request, Component $component): JsonResponse
+    {
+        $this->authorize('moderate', $component);
+
+        $this->assertCanTransition($component, ComponentStatus::Rejected);
+
+        $component->reject($request->validated('reason'));
+
+        // TODO(notificaciones): avisar al autor del rechazo y del motivo.
+
+        return $this->respond($component, 'Componente rechazado.');
+    }
+
+    /**
      * POST /components/{component}/unpublish — published → unpublished.
      * Deja de estar visible en el marketplace pero conserva su historial.
      */
@@ -58,6 +98,24 @@ class ComponentStateController extends Controller
         $component->unpublish();
 
         return $this->respond($component, 'Componente despublicado.');
+    }
+
+    /**
+     * POST /components/{component}/revert — rejected|unpublished → draft.
+     *
+     * Cierra el ciclo: desde `rejected` el enum solo permite volver a borrador,
+     * así que sin este paso un componente rechazado quedaría atrapado sin
+     * manera de reenviarlo a revisión.
+     */
+    public function revert(Component $component): JsonResponse
+    {
+        $this->authorize('revert', $component);
+
+        $this->assertCanTransition($component, ComponentStatus::Draft);
+
+        $component->revertToDraft();
+
+        return $this->respond($component, 'Componente devuelto a borrador.');
     }
 
     /**

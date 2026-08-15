@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api'
 import { useI18n } from '@/i18n/useI18n'
-import { catalogApi, componentsApi, type ComponentFilters } from '@/studio/api'
+import { catalogApi, componentsApi, moderationApi, type ComponentFilters } from '@/studio/api'
 import { unzipFirstTextFile } from '@/studio/zip'
 import type {
   Component,
@@ -35,6 +35,14 @@ export const componentKeys = {
   previewCode: (idOrSlug: string | number) => ['components', 'preview-code', idOrSlug] as const,
   categories: (stack?: Stack) => ['categories', stack ?? 'all'] as const,
   tags: (q?: string) => ['tags', q ?? ''] as const,
+}
+
+/** Claves del panel de moderación. Separadas de `componentKeys` porque la cola
+ *  se invalida por acciones de admin, no por las del autor. */
+export const moderationKeys = {
+  all: ['moderation'] as const,
+  queue: (status: ComponentStatus) => ['moderation', 'queue', status] as const,
+  counts: () => ['moderation', 'counts'] as const,
 }
 
 // --- Queries ----------------------------------------------------------------
@@ -174,6 +182,79 @@ export function useUnpublishComponent() {
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   })
+}
+
+/**
+ * Vuelve a borrador tras un rechazo o una despublicación. Sin este paso un
+ * componente rechazado no puede reenviarse: el backend no acepta `submit`
+ * desde `rejected`.
+ */
+export function useRevertComponent() {
+  const qc = useQueryClient()
+  const { t } = useI18n()
+  return useMutation({
+    mutationFn: (idOrSlug: string | number) => componentsApi.revert(idOrSlug),
+    onSuccess: (updated: Component) => {
+      qc.setQueryData(componentKeys.detail(updated.slug), updated)
+      void qc.invalidateQueries({ queryKey: componentKeys.all })
+      toast.success(t('studio.toast.reverted'))
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  })
+}
+
+// --- Moderación (admin) -----------------------------------------------------
+
+export function useModerationQueue(status: ComponentStatus = 'pending_review') {
+  return useQuery({
+    queryKey: moderationKeys.queue(status),
+    queryFn: () => moderationApi.queue({ status }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useModerationCounts() {
+  return useQuery({
+    queryKey: moderationKeys.counts(),
+    queryFn: () => moderationApi.counts(),
+  })
+}
+
+/**
+ * Tras resolver una revisión se invalidan DOS árboles: la cola de moderación
+ * (la fila desaparece de `pending_review`) y el de componentes (el marketplace
+ * público acaba de ganar o perder una ficha).
+ */
+function useResolveModeration<TVars>(
+  mutationFn: (vars: TVars) => Promise<Component>,
+  successKey: string,
+) {
+  const qc = useQueryClient()
+  const { t } = useI18n()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: moderationKeys.all })
+      void qc.invalidateQueries({ queryKey: componentKeys.all })
+      toast.success(t(successKey))
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  })
+}
+
+export function useApproveComponent() {
+  return useResolveModeration(
+    (idOrSlug: string | number) => moderationApi.approve(idOrSlug),
+    'admin.toast.approved',
+  )
+}
+
+export function useRejectComponent() {
+  return useResolveModeration(
+    ({ idOrSlug, reason }: { idOrSlug: string | number; reason: string }) =>
+      moderationApi.reject(idOrSlug, reason),
+    'admin.toast.rejected',
+  )
 }
 
 export function useUploadFile(idOrSlug: string | number) {
