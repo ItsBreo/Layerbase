@@ -225,6 +225,21 @@ export const messages = {
         },
       },
     },
+    publicProfile: {
+      published: 'Componentes publicados',
+      empty: '{name} aún no tiene componentes publicados.',
+      stats: {
+        components: 'Componentes',
+        downloads: 'Descargas',
+        rating: 'Valoración',
+        ratingCount: 'sobre {count} reseñas',
+      },
+      notFound: {
+        title: 'Autor no encontrado',
+        body: 'Esta cuenta no existe o ya no está disponible.',
+        back: 'Explorar componentes',
+      },
+    },
     verifyEmail: {
       success: {
         title: 'Email verificado',
@@ -667,6 +682,21 @@ export const messages = {
           banned: 'Account suspended',
           unbanned: 'Account reactivated',
         },
+      },
+    },
+    publicProfile: {
+      published: 'Published components',
+      empty: '{name} has no published components yet.',
+      stats: {
+        components: 'Components',
+        downloads: 'Downloads',
+        rating: 'Rating',
+        ratingCount: 'across {count} reviews',
+      },
+      notFound: {
+        title: 'Author not found',
+        body: 'This account does not exist or is no longer available.',
+        back: 'Explore components',
       },
     },
     verifyEmail: {

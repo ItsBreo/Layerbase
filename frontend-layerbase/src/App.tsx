@@ -18,6 +18,7 @@ import ForgotPassword from '@/auth/ForgotPassword'
 import ResetPassword from '@/auth/ResetPassword'
 import OAuthCallback from '@/auth/OAuthCallback'
 import VerifyEmail from '@/auth/VerifyEmail'
+import PublicProfile from '@/profile/PublicProfile'
 import Home from '@/pages/Home'
 import Dashboard from '@/pages/Dashboard'
 import AdminPanel from '@/pages/AdminPanel'
@@ -50,6 +51,7 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route path="/components" element={<Explore />} />
       <Route path="/components/:slug" element={<ComponentDetail />} />
+      <Route path="/users/:id" element={<PublicProfile />} />
       <Route path="/auth/callback" element={<OAuthCallback />} />
       {/* Destino del enlace del correo: el backend verifica y redirige aquí
           con ?status=. Pública porque se abre desde el cliente de correo. */}

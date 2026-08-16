@@ -117,7 +117,13 @@ export default function ComponentDetail() {
               texto ni desalineen respecto al avatar. */}
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
             {component.author && (
-              <span className="inline-flex items-center gap-2">
+              // La ficha es el único sitio donde el autor puede ser enlace: la
+              // tarjeta de la rejilla y el carrusel van envueltos enteros en un
+              // <Link> al componente, y anidar enlaces no es HTML válido.
+              <Link
+                to={`/users/${component.author.id}`}
+                className="inline-flex items-center gap-2 transition hover:text-accent"
+              >
                 {component.author.avatar_url ? (
                   <img src={component.author.avatar_url} alt="" className="size-5 rounded-full" />
                 ) : (
@@ -130,7 +136,7 @@ export default function ComponentDetail() {
                 <span className="font-display text-xs font-semibold text-text">
                   {component.author.name}
                 </span>
-              </span>
+              </Link>
             )}
             {component.author && <span className="text-border">·</span>}
             <span className="font-mono text-xs">{t(`studio.stack.${component.stack}`)}</span>

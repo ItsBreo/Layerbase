@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\Component\ComponentFileController;
 use App\Http\Controllers\Api\Component\ComponentStateController;
 use App\Http\Controllers\Api\Component\TagController;
 use App\Http\Controllers\Api\Profile\ProfileController;
+use App\Http\Controllers\Api\User\PublicProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -120,6 +121,20 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 | máquina de estados y archivos exigen sesión (Sanctum + cuenta activa) y
 | pasan por ComponentPolicy.
 */
+
+/*
+|--------------------------------------------------------------------------
+| Perfil público de autor
+|--------------------------------------------------------------------------
+| Auth opcional: un invitado lo ve igual, pero con sesión el recurso puede
+| enseñar más (el dueño y los admin ven siempre el resumen de autor, esté
+| publicado o no).
+*/
+Route::middleware('auth.optional')->group(function () {
+    Route::get('users/{user}', [PublicProfileController::class, 'show'])->name('users.show');
+    Route::get('users/{user}/components', [PublicProfileController::class, 'components'])
+        ->name('users.components');
+});
 
 // Catálogos de apoyo (públicos, solo lectura).
 Route::get('categories', [CategoryController::class, 'index'])->name('categories.index');
