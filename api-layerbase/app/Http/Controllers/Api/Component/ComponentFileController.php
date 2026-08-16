@@ -50,8 +50,17 @@ class ComponentFileController extends Controller
 
         abort_if($source === null, 404, 'Este componente no tiene código fuente disponible.');
 
-        // TODO(descargas): incrementar el contador `downloads` de forma atómica
-        // aquí (o vía evento) cuando se consolide la métrica.
+        // Incremento atómico (UPDATE ... SET downloads = downloads + 1): dos
+        // descargas simultáneas no se pisan, cosa que sí pasaría leyendo y
+        // guardando desde PHP. `downloads` se muestra en las tarjetas, la ficha
+        // y el resumen de autor, así que hasta ahora era una métrica visible
+        // que siempre enseñaba lo que dejó el seeder.
+        //
+        // Cuenta la entrega de la URL firmada, no la descarga efectiva del
+        // archivo: el fichero lo baja el cliente contra el disco, sin volver a
+        // pasar por la API. Medir lo segundo exigiría servir el archivo desde
+        // aquí y perder las presigned URLs de S3.
+        $component->increment('downloads');
 
         return response()->json([
             'url' => $source->temporaryUrl(),

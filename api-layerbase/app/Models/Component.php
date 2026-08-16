@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -67,6 +69,50 @@ class Component extends Model
                 $component->slug = self::uniqueSlug($component->title);
             }
         });
+
+        /*
+         * Los archivos se borran solo en el borrado DEFINITIVO, nunca en el
+         * soft delete: mientras el componente se pueda restaurar, sus archivos
+         * tienen que seguir ahí o volvería vacío.
+         *
+         * Quien fuerza el borrado es el comando `components:purge-deleted`.
+         * Sin ese par (evento + comando) no había ninguna vía de limpieza y los
+         * objetos se acumulaban en el disco para siempre, que en S3/R2 es dinero
+         * todos los meses por ficheros que ya no referencia nadie.
+         *
+         * `forceDeleting` (ANTES) y no `forceDeleted` (después): la FK de
+         * component_files es cascadeOnDelete, así que en cuanto desaparece la
+         * fila del componente la base de datos se lleva las de sus archivos.
+         * Enganchado al evento posterior no quedaría ninguna fila que consultar
+         * y los objetos del disco se quedarían huérfanos — que es justo lo que
+         * se quiere evitar.
+         */
+        static::forceDeleting(function (Component $component): void {
+            $component->purgeFiles();
+        });
+    }
+
+    /**
+     * Borra del disco (y de la tabla) todos los archivos del componente.
+     *
+     * Un fallo al borrar un objeto concreto no puede abortar la purga entera:
+     * si el fichero ya no está en el disco, la fila igualmente sobra.
+     */
+    public function purgeFiles(): void
+    {
+        foreach ($this->files()->get() as $file) {
+            try {
+                Storage::disk($file->disk)->delete($file->path);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo borrar un archivo de componente', [
+                    'component_id' => $this->id,
+                    'file_id' => $file->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            $file->delete();
+        }
     }
 
     private static function uniqueSlug(string $title): string
