@@ -11,7 +11,7 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { NavLink } from 'react-router-dom'
 import { Compass, Home, LayoutDashboard, Package, ShieldCheck, type LucideIcon } from 'lucide-react'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
 

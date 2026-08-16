@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { applyServerErrors } from '@/auth/formErrors'
 import { AuthCard, OAuthButtons, OrDivider, SubmitButton, TextField } from '@/auth/ui'
 import type { RegisterPayload } from '@/auth/types'
@@ -23,7 +23,7 @@ export default function Register() {
   const {
     register,
     handleSubmit,
-    watch,
+    getValues,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<RegisterPayload>({
@@ -90,7 +90,7 @@ export default function Register() {
           {...register('password_confirmation', {
             required: t('auth.validation.passwordConfirm'),
             validate: (value) =>
-              value === watch('password') || t('auth.validation.passwordMismatch'),
+              value === getValues('password') || t('auth.validation.passwordMismatch'),
           })}
         />
 

@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\AuthenticateOptional;
+use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsureUserHasRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,9 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Alias de middleware usados en routes/api.php.
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
-            'active' => \App\Http\Middleware\EnsureAccountIsActive::class,
-            'auth.optional' => \App\Http\Middleware\AuthenticateOptional::class,
+            'role' => EnsureUserHasRole::class,
+            'active' => EnsureAccountIsActive::class,
+            'auth.optional' => AuthenticateOptional::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

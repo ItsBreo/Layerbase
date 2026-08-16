@@ -9,7 +9,7 @@
  * Se usan como elementos envolventes con <Outlet/> en el árbol de rutas.
  */
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import type { UserRole } from '@/auth/types'
 
 /** Pantalla mientras se resuelve la sesión inicial (evita parpadeos/redirecciones falsas). */

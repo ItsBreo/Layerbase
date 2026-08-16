@@ -19,7 +19,7 @@ import { toast } from 'sonner'
 import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Field'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { authApi } from '@/Login/auth'
 import { getErrorMessage } from '@/lib/api'
 import { fadeUpItem, staggerContainer } from '@/lib/motion'
@@ -152,7 +152,6 @@ function IdentityHeader({ user, onUploaded }: { user: User; onUploaded: () => Pr
   )
 }
 
-/** Aviso de email sin verificar. Informativo: aún no hay reenvío en el backend. */
 /**
  * Aviso de email sin verificar. Ya no es solo informativo: sin verificar no se
  * puede enviar un componente a revisión, así que ofrece reenviar el correo.

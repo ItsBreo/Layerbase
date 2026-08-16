@@ -26,7 +26,7 @@ export default function ResetPassword() {
   const {
     register,
     handleSubmit,
-    watch,
+    getValues,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ defaultValues: { password: '', password_confirmation: '' } })
@@ -74,7 +74,7 @@ export default function ResetPassword() {
           {...register('password_confirmation', {
             required: t('auth.validation.passwordConfirm'),
             validate: (value) =>
-              value === watch('password') || t('auth.validation.passwordMismatch'),
+              value === getValues('password') || t('auth.validation.passwordMismatch'),
           })}
         />
         <SubmitButton loading={isSubmitting}>{t('auth.reset.submit')}</SubmitButton>

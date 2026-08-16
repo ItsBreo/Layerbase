@@ -99,6 +99,63 @@ class ModerationTest extends TestCase
             ->assertJsonValidationErrors('status');
     }
 
+    public function test_the_only_admin_can_approve_their_own_component(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $component = $this->makeComponent(ComponentStatus::PendingReview);
+        $component->forceFill(['user_id' => $admin->id])->save();
+
+        // Con un único administrador, prohibirlo dejaría la plataforma sin
+        // ninguna forma de publicar nada.
+        $this->actingAs($admin)
+            ->postJson("/api/admin/components/{$component->slug}/approve")
+            ->assertOk();
+    }
+
+    public function test_an_admin_cannot_approve_their_own_component_when_another_admin_exists(): void
+    {
+        $admin = User::factory()->admin()->create();
+        User::factory()->admin()->create(); // Ya hay quien lo revise.
+
+        $component = $this->makeComponent(ComponentStatus::PendingReview);
+        $component->forceFill(['user_id' => $admin->id])->save();
+
+        // En cuanto hay alguien más, nadie revisa su propio trabajo.
+        $this->actingAs($admin)
+            ->postJson("/api/admin/components/{$component->slug}/approve")
+            ->assertForbidden();
+
+        $this->assertSame(ComponentStatus::PendingReview, $component->fresh()->status);
+    }
+
+    public function test_the_other_admin_can_approve_it(): void
+    {
+        $author = User::factory()->admin()->create();
+        $reviewer = User::factory()->admin()->create();
+
+        $component = $this->makeComponent(ComponentStatus::PendingReview);
+        $component->forceFill(['user_id' => $author->id])->save();
+
+        $this->actingAs($reviewer)
+            ->postJson("/api/admin/components/{$component->slug}/approve")
+            ->assertOk();
+    }
+
+    public function test_a_suspended_admin_does_not_count_as_an_available_reviewer(): void
+    {
+        $admin = User::factory()->admin()->create();
+        User::factory()->admin()->create(['banned' => true, 'ban_reason' => 'Cuenta comprometida.']);
+
+        $component = $this->makeComponent(ComponentStatus::PendingReview);
+        $component->forceFill(['user_id' => $admin->id])->save();
+
+        // Un admin suspendido no puede entrar, así que no puede revisar nada:
+        // seguiría bloqueando la publicación sin resolver nunca la cola.
+        $this->actingAs($admin)
+            ->postJson("/api/admin/components/{$component->slug}/approve")
+            ->assertOk();
+    }
+
     // --- Rechazar ---------------------------------------------------------
 
     public function test_an_admin_rejects_a_component_with_a_reason(): void

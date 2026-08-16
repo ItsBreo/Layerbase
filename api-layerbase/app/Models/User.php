@@ -105,6 +105,23 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->password !== null;
     }
 
+    /**
+     * ¿Hay algún OTRO administrador activo además del indicado?
+     *
+     * Lo usa `ComponentPolicy::moderate` para decidir si exigir revisión
+     * independiente: la regla "nadie aprueba su propio componente" solo tiene
+     * sentido si queda alguien más que pueda aprobarlo. Los suspendidos no
+     * cuentan — no pueden entrar, así que no pueden revisar nada.
+     */
+    public static function hasOtherActiveAdmins(self $except): bool
+    {
+        return static::query()
+            ->where('role', UserRole::Admin)
+            ->where('banned', false)
+            ->whereKeyNot($except->getKey())
+            ->exists();
+    }
+
     /*
      * Acciones de administración. `role`, `banned` y `ban_reason` están fuera
      * de $fillable a propósito (son privilegios), así que se asignan por

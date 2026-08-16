@@ -21,6 +21,14 @@ class ComponentPolicy
      */
     public function before(User $user, string $ability): ?bool
     {
+        // La moderación se sale del atajo a propósito: la decide `moderate()`,
+        // que además comprueba que el admin no se esté revisando a sí mismo.
+        // Sin esta excepción, `before()` le concedería la habilidad antes de
+        // que esa comprobación llegara a ejecutarse.
+        if ($ability === 'moderate') {
+            return null;
+        }
+
         return $user->isAdmin() ? true : null;
     }
 
@@ -71,17 +79,29 @@ class ComponentPolicy
     }
 
     /**
-     * Moderar (aprobar o rechazar): SOLO admin. El autor no puede publicarse a
-     * sí mismo, que es justo lo que separa `submit` de `approve`.
+     * Moderar (aprobar o rechazar): SOLO admin, y a poder ser no el suyo.
      *
-     * En la práctica `before()` ya corta en true para los admin y este cuerpo
-     * no llega a evaluarse, pero se deja explícito: si algún día se acota el
-     * atajo global, la regla real sigue escrita aquí y no se abre un agujero
-     * por omisión.
+     * Un admin es también autor, así que sin más reglas podría publicarse solo
+     * y la moderación no significaría nada para él. Pero prohibirlo sin más
+     * rompe la plataforma cuando solo hay un administrador: nadie podría
+     * aprobar sus componentes y no se publicaría nada, nunca.
+     *
+     * De ahí la regla: **nadie revisa su propio trabajo mientras haya otra
+     * persona que pueda hacerlo**. Se ajusta sola — hoy, con un único admin,
+     * puede aprobar los suyos; el día que entre un segundo admin activo, deja
+     * de poder y pasa a necesitar revisión independiente.
      */
     public function moderate(User $user, Component $component): bool
     {
-        return $user->isAdmin();
+        if (! $user->isAdmin()) {
+            return false;
+        }
+
+        if ($component->isOwnedBy($user)) {
+            return ! User::hasOtherActiveAdmins($user);
+        }
+
+        return true;
     }
 
     /** Descargar el código fuente: delega en la regla de dominio del modelo. */

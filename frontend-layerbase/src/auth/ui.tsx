@@ -131,8 +131,11 @@ const OAUTH_PROVIDERS = [
 }>
 
 export function OAuthButtons() {
+  // `assign()` y no `location.href = ...`: es una navegación completa fuera de
+  // la SPA (al proveedor OAuth), y asignar a una propiedad de un objeto externo
+  // al componente es lo que marca la regla de inmutabilidad del compilador.
   const go = (provider: OAuthProvider) => {
-    window.location.href = authApi.oauthRedirectUrl(provider)
+    window.location.assign(authApi.oauthRedirectUrl(provider))
   }
 
   return (

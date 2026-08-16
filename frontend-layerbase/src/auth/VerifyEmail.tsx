@@ -13,7 +13,7 @@ import { CircleCheck, CircleX, Info } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { Button } from '@/components/ui/Button'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { useI18n } from '@/i18n/useI18n'
 
 type Status = 'success' | 'already' | 'invalid'

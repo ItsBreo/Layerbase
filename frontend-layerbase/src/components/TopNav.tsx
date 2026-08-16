@@ -16,7 +16,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { LogOut } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { useI18n } from '@/i18n/useI18n'
 import { BrandWordmark } from '@/components/Brand'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'

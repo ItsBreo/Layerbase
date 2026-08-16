@@ -8,49 +8,19 @@
  *
  * El token vive en localStorage (via `lib/token`); aquí solo vive el usuario.
  */
-import {
-  createContext,
-  use,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { authApi } from '@/Login/auth'
 import { UNAUTHORIZED_EVENT } from '@/lib/api'
 import { clearToken, getToken, setToken } from '@/lib/token'
-import type {
-  AuthStatus,
-  LoginCredentials,
-  RegisterPayload,
-  User,
-  UserRole,
-} from '@/auth/types'
-
-interface AuthContextValue {
-  user: User | null
-  status: AuthStatus
-  isLoading: boolean
-  isAuthenticated: boolean
-  isGuest: boolean
-  isAdmin: boolean
-  /** ¿El usuario tiene alguno de los roles indicados? (admin siempre pasa) */
-  hasRole: (...roles: UserRole[]) => boolean
-  login: (credentials: LoginCredentials) => Promise<void>
-  register: (payload: RegisterPayload) => Promise<void>
-  logout: () => Promise<void>
-  /** Recupera el usuario actual desde el backend (tras OAuth, p. ej.). */
-  refresh: () => Promise<void>
-  /** Establece la sesión a partir de un token (callback de OAuth). */
-  setSession: (token: string) => Promise<void>
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+import { AuthContext, type AuthContextValue } from '@/auth/useAuth'
+import type { AuthStatus, LoginCredentials, RegisterPayload, User, UserRole } from '@/auth/types'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [status, setStatus] = useState<AuthStatus>('loading')
+  // Estado inicial derivado del token: sin token no hay nada que resolver y la
+  // sesión ya es 'guest'. Arrancar siempre en 'loading' obligaba a corregirlo
+  // con un setState síncrono dentro del efecto, que dispara renders en cascada.
+  const [status, setStatus] = useState<AuthStatus>(() => (getToken() ? 'loading' : 'guest'))
 
   const applyUser = useCallback((next: User | null) => {
     setUser(next)
@@ -108,10 +78,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [applyUser])
 
-  // Bootstrap de la sesión al cargar la app.
+  /*
+   * Bootstrap de la sesión al cargar la app.
+   *
+   * No reutiliza `refresh()` porque este actualiza el estado de forma SÍNCRONA
+   * en su camino "sin token", y hacer eso dentro de un efecto encadena renders.
+   * Aquí solo se entra habiendo token, así que el estado se toca únicamente
+   * después del await, y con guarda de cancelación para no escribir sobre un
+   * provider ya desmontado.
+   */
   useEffect(() => {
-    void refresh()
-  }, [refresh])
+    if (!getToken()) return
+
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const me = await authApi.me()
+        if (!cancelled) applyUser(me)
+      } catch {
+        // Token inválido o caducado: se limpia y quedamos como invitado.
+        clearToken()
+        if (!cancelled) applyUser(null)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [applyUser])
 
   // Reacciona a tokens invalidados detectados por el interceptor de axios.
   useEffect(() => {
@@ -141,13 +136,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, status, login, register, logout, refresh, setSession])
 
   return <AuthContext value={value}>{children}</AuthContext>
-}
-
-/** Hook de acceso a la sesión. Lanza si se usa fuera del AuthProvider. */
-export function useAuth(): AuthContextValue {
-  const ctx = use(AuthContext)
-  if (ctx === null) {
-    throw new Error('useAuth debe usarse dentro de <AuthProvider>.')
-  }
-  return ctx
 }

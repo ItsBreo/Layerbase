@@ -1,0 +1,84 @@
+name: CI
+
+# Se ejecuta en cada push a las ramas troncales y en toda PR contra ellas.
+# Hasta ahora nada corría la suite automáticamente: dependía de que alguien se
+# acordase de lanzarla a mano.
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+# Una PR con varios push seguidos solo mantiene la ejecución más reciente.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Laravel)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api-layerbase
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          # sqlite: los tests corren en :memory: (ver phpunit.xml), así que no
+          # hace falta levantar PostgreSQL en CI.
+          extensions: mbstring, pdo, pdo_sqlite, sqlite3, zip, gd, intl
+          coverage: none
+
+      - name: Cachear dependencias de Composer
+        uses: actions/cache@v4
+        with:
+          path: api-layerbase/vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('api-layerbase/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar entorno
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Estilo de código (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Tests
+        run: php artisan test
+
+  frontend:
+    name: Frontend (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-layerbase
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend-layerbase/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      # `npm run build` es `tsc -b && vite build`, así que cubre a la vez los
+      # tipos y que el bundle se genere.
+      - name: Tipos y build
+        run: npm run build

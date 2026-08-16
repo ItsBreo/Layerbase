@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 /**
  * CRUD público y de autor de componentes (Módulo 3).
@@ -139,7 +140,7 @@ class ComponentController extends Controller
 
         if ($request->filled('status')) {
             $request->validate([
-                'status' => ['string', \Illuminate\Validation\Rule::enum(ComponentStatus::class)],
+                'status' => ['string', Rule::enum(ComponentStatus::class)],
             ]);
             $query->where('status', $request->input('status'));
         }
