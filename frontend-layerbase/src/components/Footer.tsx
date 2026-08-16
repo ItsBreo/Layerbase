@@ -42,10 +42,10 @@ export function Footer() {
     {
       title: t('footer.legal'),
       links: [
-        { label: t('footer.links.terms'), to: '#' },
-        { label: t('footer.links.privacy'), to: '#' },
-        { label: t('footer.links.billing'), to: '#' },
-        { label: t('footer.links.cookies'), to: '#' },
+        { label: t('footer.links.terms'), to: '/legal/terms' },
+        { label: t('footer.links.privacy'), to: '/legal/privacy' },
+        { label: t('footer.links.billing'), to: '/legal/billing' },
+        { label: t('footer.links.cookies'), to: '/legal/cookies' },
       ],
     },
   ]
