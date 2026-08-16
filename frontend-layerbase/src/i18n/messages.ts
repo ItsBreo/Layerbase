@@ -93,6 +93,8 @@ export const messages = {
       avatar: { change: 'Cambiar foto' },
       verification: {
         pending: 'Tu email aún no está verificado.',
+        blocks: 'Hasta que lo verifiques no podrás enviar componentes a revisión.',
+        resend: 'Reenviar correo',
       },
       public: {
         title: 'Perfil público',
@@ -223,6 +225,23 @@ export const messages = {
         },
       },
     },
+    verifyEmail: {
+      success: {
+        title: 'Email verificado',
+        body: 'Tu cuenta ya está verificada. Puedes publicar componentes en el marketplace.',
+      },
+      already: {
+        title: 'Ya estaba verificado',
+        body: 'Esta cuenta ya tenía el email confirmado. No hay nada más que hacer.',
+      },
+      invalid: {
+        title: 'Enlace no válido',
+        body: 'El enlace ha caducado o no es correcto. Pide uno nuevo desde tu panel.',
+      },
+      toDashboard: 'Ir a mi panel',
+      toLogin: 'Iniciar sesión',
+      toExplore: 'Explorar componentes',
+    },
     notFound: {
       title: 'Página no encontrada',
       body: 'La página que buscas no existe o se ha movido.',
@@ -276,6 +295,9 @@ export const messages = {
         errorGeneric: 'No se pudo iniciar sesión.',
         errorProvider: 'No se pudo completar el inicio con el proveedor.',
         errorBanned: 'Tu cuenta está suspendida.',
+        errorState: 'La petición ha caducado o no es válida. Inténtalo de nuevo.',
+        errorEmailTaken:
+          'Ya hay una cuenta con ese email sin verificar. Entra con tu contraseña y vincula el proveedor desde tu perfil.',
         errorToken: 'Falta el token de autenticación.',
         errorSession: 'No se pudo validar la sesión.',
       },
@@ -515,6 +537,8 @@ export const messages = {
       avatar: { change: 'Change photo' },
       verification: {
         pending: 'Your email is not verified yet.',
+        blocks: 'Until you verify it you won’t be able to submit components for review.',
+        resend: 'Resend email',
       },
       public: {
         title: 'Public profile',
@@ -645,6 +669,23 @@ export const messages = {
         },
       },
     },
+    verifyEmail: {
+      success: {
+        title: 'Email verified',
+        body: 'Your account is verified. You can now publish components to the marketplace.',
+      },
+      already: {
+        title: 'Already verified',
+        body: 'This account was already confirmed. Nothing else to do.',
+      },
+      invalid: {
+        title: 'Invalid link',
+        body: 'The link expired or is not correct. Request a new one from your dashboard.',
+      },
+      toDashboard: 'Go to my dashboard',
+      toLogin: 'Sign in',
+      toExplore: 'Explore components',
+    },
     notFound: {
       title: 'Page not found',
       body: 'The page you’re looking for doesn’t exist or has moved.',
@@ -698,6 +739,9 @@ export const messages = {
         errorGeneric: 'Couldn’t sign in.',
         errorProvider: 'Couldn’t complete sign in with the provider.',
         errorBanned: 'Your account is suspended.',
+        errorState: 'The request expired or is not valid. Please try again.',
+        errorEmailTaken:
+          'There is already an unverified account with that email. Sign in with your password and link the provider from your profile.',
         errorToken: 'Missing authentication token.',
         errorSession: 'Couldn’t validate the session.',
       },

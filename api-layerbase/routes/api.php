@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\ModerationController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\Auth\AuthSessionController;
+use App\Http\Controllers\Api\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Auth\RegisterController;
 use App\Http\Controllers\Api\Auth\SocialAuthController;
@@ -32,6 +33,15 @@ Route::prefix('auth')->group(function () {
         Route::post('reset-password', [PasswordResetController::class, 'reset'])->name('auth.reset-password');
     });
 
+    // --- Verificación de email ---
+    // El enlace del correo se abre desde el cliente de correo, sin token: lo
+    // protege la firma de la URL, no la sesión. Por eso va fuera del grupo
+    // autenticado. El nombre `verification.verify` es el que Laravel usa para
+    // construir la URL del email, así que no se puede cambiar.
+    Route::get('email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+        ->middleware('signed')
+        ->name('verification.verify');
+
     // --- OAuth (GitHub / Google) ---
     Route::middleware('throttle:auth')->group(function () {
         Route::get('{provider}/redirect', [SocialAuthController::class, 'redirect'])
@@ -45,6 +55,13 @@ Route::prefix('auth')->group(function () {
     // --- Protegidas (token Sanctum + cuenta activa) ---
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('me', [AuthSessionController::class, 'me'])->name('auth.me');
+
+        // Reenvío del correo de verificación. Throttle `auth`: es un endpoint
+        // que manda emails, así que no puede quedar abierto a repetición.
+        Route::post('email/verification-notification', [EmailVerificationController::class, 'resend'])
+            ->middleware('throttle:auth')
+            ->name('verification.send');
+
         Route::post('logout', [AuthSessionController::class, 'destroy'])->name('auth.logout');
 
         // Perfil del propio usuario. Sin parámetro de usuario en la ruta: se

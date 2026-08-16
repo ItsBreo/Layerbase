@@ -46,11 +46,29 @@ class ComponentFile extends Model
             return $disk->temporaryUrl($this->path, $expiresAt, [
                 'ResponseContentDisposition' => 'attachment; filename="'.$this->filename.'"',
             ]);
-        } catch (\Throwable) {
-            // Discos sin presigned URLs (public/local en dev): devolvemos una URL
-            // pública RELATIVA (/storage/...). Al ser relativa funciona detrás del
-            // proxy de Vite y sin depender del puerto de APP_URL; nginx la sirve
-            // por el symlink de storage:link.
+        } catch (\Throwable $e) {
+            // Un archivo PROTEGIDO no puede degradar a URL pública permanente.
+            //
+            // El fallback de abajo devuelve una URL sin firma y sin caducidad:
+            // para el `source` de un componente de pago eso significa repartir
+            // el producto saltándose la policy, y para siempre. Antes se caía
+            // aquí en silencio; ahora revienta, que es lo correcto — una mala
+            // configuración de disco tiene que verse, no filtrar código.
+            //
+            // Se dispara con discos sin URLs firmadas (p. ej. `public`). El
+            // disco `local` sí las soporta gracias a `serve => true`.
+            if ($this->type->isProtected()) {
+                throw new \RuntimeException(
+                    "El disco '{$this->disk}' no soporta URLs temporales firmadas y el archivo "
+                    ."de tipo '{$this->type->value}' está protegido. Configura un disco que las "
+                    .'soporte (s3/r2, o local con serve => true).',
+                    previous: $e,
+                );
+            }
+
+            // readme/preview son públicos por definición: aquí la URL permanente
+            // es la correcta. Relativa (/storage/...) para que funcione detrás
+            // del proxy de Vite sin depender del puerto de APP_URL.
             try {
                 $url = $disk->url($this->path);
 

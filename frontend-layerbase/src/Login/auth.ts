@@ -81,6 +81,15 @@ export const authApi = {
    * URL absoluta del inicio de flujo OAuth. Se navega con el navegador
    * completo (no axios), porque implica redirecciones cross-origin.
    */
+  /**
+   * Reenvía el correo de verificación. Responde igual esté o no verificada la
+   * cuenta: el endpoint no sirve para averiguar el estado de una cuenta.
+   */
+  async resendVerification(): Promise<{ message: string }> {
+    const { data } = await api.post<{ message: string }>('/auth/email/verification-notification')
+    return data
+  },
+
   oauthRedirectUrl(provider: OAuthProvider): string {
     return `/api/auth/${provider}/redirect`
   },

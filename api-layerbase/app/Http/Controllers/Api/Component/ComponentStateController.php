@@ -9,6 +9,7 @@ use App\Http\Requests\Component\RejectComponentRequest;
 use App\Http\Resources\ComponentResource;
 use App\Models\Component;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -25,9 +26,18 @@ class ComponentStateController extends Controller
      * POST /components/{component}/submit — draft → pending_review.
      * Requiere que el componente tenga, al menos, código fuente subido.
      */
-    public function submit(Component $component): JsonResponse
+    public function submit(Request $request, Component $component): JsonResponse
     {
         $this->authorize('submit', $component);
+
+        // Publicar es la única acción con el email verificado por requisito: se
+        // puede entrar y navegar sin verificar, pero no poner nada en el
+        // marketplace desde una dirección que nadie ha confirmado que exista.
+        if (! $request->user()->hasVerifiedEmail()) {
+            throw ValidationException::withMessages([
+                'email' => ['Verifica tu email antes de enviar un componente a revisión.'],
+            ]);
+        }
 
         $this->assertCanTransition($component, ComponentStatus::PendingReview);
 

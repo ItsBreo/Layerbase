@@ -153,12 +153,36 @@ function IdentityHeader({ user, onUploaded }: { user: User; onUploaded: () => Pr
 }
 
 /** Aviso de email sin verificar. Informativo: aún no hay reenvío en el backend. */
+/**
+ * Aviso de email sin verificar. Ya no es solo informativo: sin verificar no se
+ * puede enviar un componente a revisión, así que ofrece reenviar el correo.
+ */
 function VerificationNotice() {
   const { t } = useI18n()
+  const [sending, setSending] = useState(false)
+
+  const resend = async () => {
+    setSending(true)
+    try {
+      const { message } = await authApi.resendVerification()
+      toast.success(message)
+    } catch (e) {
+      toast.error(getErrorMessage(e))
+    } finally {
+      setSending(false)
+    }
+  }
+
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+    <div className="flex flex-wrap items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
       <AlertCircle className="mt-0.5 size-4 shrink-0" />
-      <p>{t('profile.verification.pending')}</p>
+      <div className="min-w-0 flex-1">
+        <p>{t('profile.verification.pending')}</p>
+        <p className="mt-1 text-warning/80">{t('profile.verification.blocks')}</p>
+      </div>
+      <Button variant="secondary" size="sm" loading={sending} onClick={resend}>
+        {t('profile.verification.resend')}
+      </Button>
     </div>
   )
 }
