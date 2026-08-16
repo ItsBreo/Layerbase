@@ -28,7 +28,9 @@ class RegisterController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user' => new UserResource($user),
+            // forSelf: la petición aún no está autenticada (el token se acaba
+            // de emitir), así que sin esto la respuesta saldría sin email.
+            'user' => UserResource::forSelf($user),
         ], 201);
     }
 

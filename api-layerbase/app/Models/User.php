@@ -104,6 +104,45 @@ class User extends Authenticatable
         return $this->password !== null;
     }
 
+    /*
+     * Acciones de administración. `role`, `banned` y `ban_reason` están fuera
+     * de $fillable a propósito (son privilegios), así que se asignan por
+     * propiedad directa desde este código de confianza — nunca vía update().
+     */
+
+    /**
+     * Suspende la cuenta y revoca TODOS sus tokens.
+     *
+     * El middleware `EnsureAccountIsActive` ya corta al baneado en su siguiente
+     * petición, pero eso deja viva la sesión hasta que la usa. Borrar los
+     * tokens aquí hace que el baneo surta efecto en el acto, que es lo que se
+     * espera de una suspensión.
+     */
+    public function ban(string $reason): void
+    {
+        $this->banned = true;
+        $this->ban_reason = $reason;
+        $this->save();
+
+        $this->tokens()->delete();
+    }
+
+    /** Reactiva la cuenta. Tendrá que volver a iniciar sesión. */
+    public function unban(): void
+    {
+        $this->banned = false;
+        $this->ban_reason = null;
+        $this->save();
+    }
+
+    /** Cambia el rol global. La comprobación de a quién se le puede cambiar
+     *  vive en el controlador (no se puede uno cambiar el suyo). */
+    public function changeRole(UserRole $role): void
+    {
+        $this->role = $role;
+        $this->save();
+    }
+
     /**
      * Resumen de autor, calculado sobre los componentes PUBLICADOS.
      *

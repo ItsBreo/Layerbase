@@ -15,6 +15,7 @@ import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { Select } from '@/components/ui/Field'
 import { Masonry } from '@/components/ui/Masonry'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useI18n } from '@/i18n/useI18n'
 import { fadeUpItem, staggerContainer } from '@/lib/motion'
 import { cn } from '@/lib/utils'
@@ -41,13 +42,9 @@ export default function Explore() {
   const [stack, setStack] = useState<Stack | undefined>(undefined)
   const [sort, setSort] = useState<SortOption>('newest')
   const [search, setSearch] = useState('')
-  const [q, setQ] = useState('')
 
   // Debounce de la búsqueda (la escritura no dispara una petición por tecla).
-  useEffect(() => {
-    const id = window.setTimeout(() => setQ(search.trim()), 350)
-    return () => window.clearTimeout(id)
-  }, [search])
+  const q = useDebouncedValue(search.trim(), 350)
 
   const filters = useMemo<ComponentFilters>(
     () => ({ stack, sort, q: q || undefined }),

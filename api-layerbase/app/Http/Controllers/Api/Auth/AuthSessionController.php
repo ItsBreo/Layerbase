@@ -46,7 +46,8 @@ class AuthSessionController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user' => new UserResource($user),
+            // forSelf: en el login la petición todavía no va autenticada.
+            'user' => UserResource::forSelf($user),
         ]);
     }
 

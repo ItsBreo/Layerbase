@@ -19,6 +19,7 @@ import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { Button } from '@/components/ui/Button'
 import { PriceBadge, StatusBadge, Tag } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { AdminNav } from '@/admin/AdminNav'
 import { useI18n } from '@/i18n/useI18n'
 import { timeAgo } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -50,9 +51,11 @@ export default function AdminPanel() {
           <p className="mt-3 max-w-xl text-muted">{t('admin.body')}</p>
         </motion.div>
 
+        <AdminNav />
+
         {/* Pestañas por estado, con el contador al lado. Los contadores llegan
             de una sola query agregada, no de una petición por pestaña. */}
-        <div className="mt-8 flex flex-wrap gap-2">
+        <div className="mt-6 flex flex-wrap gap-2">
           {COMPONENT_STATUSES.map((s) => (
             <StatusTab
               key={s}

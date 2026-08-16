@@ -20,6 +20,7 @@ import OAuthCallback from '@/auth/OAuthCallback'
 import Home from '@/pages/Home'
 import Dashboard from '@/pages/Dashboard'
 import AdminPanel from '@/pages/AdminPanel'
+import AdminUsers from '@/pages/AdminUsers'
 import NotFound from '@/pages/NotFound'
 import Explore from '@/studio/Explore'
 import ComponentDetail from '@/studio/ComponentDetail'
@@ -102,6 +103,7 @@ export default function App() {
       {/* Solo administradores */}
       <Route element={<AdminRoute />}>
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

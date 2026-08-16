@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Admin\ModerationController;
+use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\Auth\AuthSessionController;
 use App\Http\Controllers\Api\Auth\PasswordResetController;
 use App\Http\Controllers\Api\Auth\RegisterController;
@@ -78,6 +79,15 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
             ->name('admin.components.approve');
         Route::post('components/{component}/reject', [ComponentStateController::class, 'reject'])
             ->name('admin.components.reject');
+
+        // --- Gestión de usuarios ---
+        // Roles y suspensiones. `counts` va ANTES del comodín {user} para que
+        // no lo capture como id.
+        Route::get('users', [AdminUserController::class, 'index'])->name('admin.users.index');
+        Route::get('users/counts', [AdminUserController::class, 'counts'])->name('admin.users.counts');
+        Route::patch('users/{user}/role', [AdminUserController::class, 'updateRole'])->name('admin.users.role');
+        Route::post('users/{user}/ban', [AdminUserController::class, 'ban'])->name('admin.users.ban');
+        Route::post('users/{user}/unban', [AdminUserController::class, 'unban'])->name('admin.users.unban');
     });
 
     Route::middleware('role:author')->prefix('author')->group(function () {

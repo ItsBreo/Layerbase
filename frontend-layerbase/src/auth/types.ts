@@ -10,19 +10,26 @@ export type UserRole = 'user' | 'author' | 'admin'
 export interface User {
   id: number
   name: string
-  email: string
+  /**
+   * Campos INTERNOS: el backend solo los envía al propio usuario o a un admin.
+   * En un listado público (`author` de un componente) llegan `undefined`, así
+   * que nunca se pueden dar por presentes fuera del perfil o del panel.
+   */
+  email?: string
+  stripe_onboarded?: boolean
+  banned?: boolean
+  ban_reason?: string | null
+  email_verified_at?: string | null
+
   role: UserRole
   avatar_url: string | null
   bio: string | null
   website: string | null
   github_username: string | null
   twitter_username: string | null
-  stripe_onboarded: boolean
-  banned: boolean
-  /** Solo presente para el propio usuario o un admin. */
-  ban_reason?: string | null
-  email_verified_at: string | null
   created_at: string
+  /** Solo en el listado del panel de admin (withCount). */
+  components_count?: number
   /** Ajuste propio: ¿el resumen de autor es visible para terceros? */
   stats_public?: boolean
   /** false en cuentas creadas por OAuth (no tienen contraseña local). */
