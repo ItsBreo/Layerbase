@@ -164,10 +164,15 @@ puede salir sin ellas.
 No existe. Es lo que da sentido a `stats_public` (2.2) y lo que convierte a un autor en algo
 más que un nombre bajo una tarjeta. Necesita endpoint público + ruta `/users/:slug`.
 
-### 3.3 Recursos
+### 3.3 Recursos del footer
 
-Documentación, "cómo subir un componente" y buenas prácticas: los tres a `#`. Menos
-urgentes que las legales, pero son los que enseñan a publicar.
+Documentación, "cómo subir un componente" y buenas prácticas: los tres siguen a `#`. Menos
+urgentes que las legales, pero son los que enseñan a publicar — y hoy **los dos requisitos
+que bloquean el envío a revisión** (código fuente subido y email verificado) no están
+explicados en ninguna parte: el autor se los encuentra como un 422 al pulsar el botón.
+
+Detalle completo, con los formatos y límites ya verificados contra el código, en la
+**Sesión D**.
 
 ### 3.4 Panel de admin — secciones que faltan
 
@@ -268,14 +273,64 @@ compras, así que conviene dejarlo genérico.
 
 ---
 
-### Sesión D — Recursos (documentación)
+### Sesión D — Recursos del footer (documentación)
 
 *Una sesión, sobre todo de escritura.*
 
-Documentación, "cómo subir un componente" y buenas prácticas: los tres enlaces
-del footer siguen a `#`. A diferencia de las legales, **este contenido sí se
-puede escribir desde el propio código**: el flujo real de publicación, los
-formatos aceptados, el límite de 5 MB, cómo funciona el preview de Sandpack.
+Los tres enlaces de la columna **Recursos** del footer siguen apuntando a `#`
+(`src/components/Footer.tsx`, claves `footer.links.docs`, `.tutorials`,
+`.bestPractices`). Son los que enseñan a publicar: sin ellos, un autor nuevo
+tiene que deducir por ensayo y error qué formatos se aceptan y por qué le
+rechazan un envío.
+
+**Diferencia clave con las legales:** ahí no se podía escribir el contenido
+porque son cláusulas que obligan legalmente y dependen de datos de empresa.
+**Aquí sí se puede escribir todo**, porque sale del propio código. Los datos ya
+están verificados y son estos:
+
+| Dato | Valor real | Dónde vive |
+| --- | --- | --- |
+| Tamaño máximo de subida | **5 MB** por archivo | `UploadComponentFileRequest::MAX_KB` |
+| Código fuente | **ZIP** (validado por contenido, no por extensión) | `UploadComponentFileRequest` |
+| README | `.md`, `.markdown`, `.txt` + UTF-8 válido | idem |
+| Imagen de portada | PNG, JPEG o WebP | idem |
+| Stacks | React, Angular, Vanilla JS | `App\Enums\Stack` |
+| Título / descripción | máx. 150 / 500 caracteres | `StoreComponentRequest` |
+| Etiquetas | hasta 10, de 50 caracteres | idem |
+| Precio | 0 = gratis; máx. 999.999,99 € | idem |
+| Caducidad del enlace de descarga | 5 minutos (URL firmada) | `config/components.php` |
+
+**Reutiliza:** el andamiaje de `src/legal/LegalPage.tsx` y `src/legal/pages.tsx`
+sirve tal cual para estas páginas — mismo layout de secciones e i18n. La
+diferencia es que aquí **ninguna sección nace `pending`**, porque el contenido sí
+se escribe.
+
+Contenido propuesto para cada una:
+
+**1. Documentación** (`/resources/docs`) — referencia. Qué es un componente en
+Layerbase, los tres stacks, la estructura del ZIP, el ciclo de estados completo
+(`draft → pending_review → published | rejected`, y que desde `rejected` hay que
+pasar por "Volver a borrador" antes de reenviar), y cómo funcionan las descargas
+con URL firmada.
+
+**2. Cómo subir un componente** (`/resources/publishing`) — tutorial paso a paso.
+Los dos requisitos que hoy **bloquean el envío a revisión y no se explican en
+ningún sitio**:
+- hay que tener el **código fuente subido**, y
+- hay que tener el **email verificado** (bloque 1).
+
+Ambos devuelven 422 con mensaje, pero el autor se los encuentra de golpe al
+pulsar el botón. Merece explicarse antes.
+
+**3. Buenas prácticas** (`/resources/best-practices`) — cómo escribir un README
+útil, por qué conviene subir imagen de portada, y **el detalle que más confunde**:
+el render en vivo de la ficha solo aparece si el componente es **React, gratuito
+(o comprado) y tiene código**. En uno de pago nunca hay preview en vivo, porque
+el código ES el producto — así que ahí la portada depende de la imagen que suba
+el autor. Ver `ComponentPolicy::previewSource` y `<Cover>` en `ComponentDetail`.
+
+**Al terminar:** enganchar los tres enlaces del footer, que es lo que cierra el
+hueco, e i18n ES/EN.
 
 ---
 
