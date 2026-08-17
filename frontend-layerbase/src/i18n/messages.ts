@@ -545,6 +545,12 @@ export const messages = {
         codeLabel: 'Código fuente',
         codeHint: 'Escribe o pega tu componente. Se empaqueta al enviar a revisión.',
         readmeHint: 'Documenta el uso. Soporta Markdown.',
+        loadingCode: 'Cargando tu código guardado…',
+        loadingReadme: 'Cargando tu README guardado…',
+        codeLoadFailed:
+          'No se ha podido leer el código que tenías guardado. Si dejas el editor vacío, tu archivo actual se conserva tal cual; si escribes algo, lo reemplazarás.',
+        readmeLoadFailed:
+          'No se ha podido leer el README que tenías guardado. Si dejas el editor vacío, tu archivo actual se conserva tal cual; si escribes algo, lo reemplazarás.',
         readmePreview: 'Vista previa',
         readmeWrite: 'Escribir',
         sourceFile: 'Archivo de código (.zip, máx. 5 MB)',
@@ -572,6 +578,8 @@ export const messages = {
         title: 'Vista previa en sandbox',
         subtitle: 'Renderizado aislado de tu componente React.',
         onlyReact: 'La vista previa en sandbox solo está disponible para componentes React.',
+        loadFailed:
+          'No se ha podido cargar el código guardado de este componente, así que abajo ves un ejemplo vacío. Tu archivo sigue intacto.',
       },
       confirm: {
         deleteTitle: '¿Eliminar este componente?',
@@ -1131,6 +1139,12 @@ export const messages = {
         codeLabel: 'Source code',
         codeHint: 'Write or paste your component. It gets packaged on submit.',
         readmeHint: 'Document usage. Markdown supported.',
+        loadingCode: 'Loading your saved code…',
+        loadingReadme: 'Loading your saved README…',
+        codeLoadFailed:
+          'Your saved code could not be read. Leaving the editor empty keeps your current file untouched; typing something will replace it.',
+        readmeLoadFailed:
+          'Your saved README could not be read. Leaving the editor empty keeps your current file untouched; typing something will replace it.',
         readmePreview: 'Preview',
         readmeWrite: 'Write',
         sourceFile: 'Code file (.zip, max 5 MB)',
@@ -1158,6 +1172,8 @@ export const messages = {
         title: 'Sandbox preview',
         subtitle: 'Isolated render of your React component.',
         onlyReact: 'Sandbox preview is only available for React components.',
+        loadFailed:
+          'This component’s saved code could not be loaded, so you are seeing an empty example below. Your file is untouched.',
       },
       confirm: {
         deleteTitle: 'Delete this component?',

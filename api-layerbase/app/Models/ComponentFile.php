@@ -24,6 +24,39 @@ class ComponentFile extends Model
         ];
     }
 
+    /**
+     * Recorta el esquema y el host de una URL que sirve ESTA misma aplicación,
+     * dejando solo ruta + query.
+     *
+     * Es imprescindible en Docker. El SPA llega por el proxy de Vite, así que
+     * Laravel ve la petición con el host interno (`nginx`) y firma la URL con
+     * él: el navegador recibía `http://nginx/storage/...`, un host que solo
+     * existe dentro de la red de Docker y que no puede resolver. Resultado: la
+     * descarga fallaba en silencio y el editor y la vista previa se quedaban
+     * vacíos. Con la URL relativa, la petición sale al mismo origen del SPA y
+     * el proxy la reenvía — y la firma sigue validando porque el host que ve
+     * Laravel al comprobarla es el mismo con el que firmó.
+     *
+     * Solo se aplica a discos locales. Una presigned URL de S3/R2 apunta a otro
+     * dominio y tiene que seguir siendo absoluta.
+     */
+    private function relativeIfServedByUs(string $url): string
+    {
+        if (config("filesystems.disks.{$this->disk}.driver") !== 'local') {
+            return $url;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+
+        if (! is_string($path) || $path === '') {
+            return $url;
+        }
+
+        $query = parse_url($url, PHP_URL_QUERY);
+
+        return $query ? "{$path}?{$query}" : $path;
+    }
+
     /** @return BelongsTo<Component, $this> */
     public function component(): BelongsTo
     {
@@ -43,9 +76,11 @@ class ComponentFile extends Model
         $disk = Storage::disk($this->disk);
 
         try {
-            return $disk->temporaryUrl($this->path, $expiresAt, [
+            $url = $disk->temporaryUrl($this->path, $expiresAt, [
                 'ResponseContentDisposition' => 'attachment; filename="'.$this->filename.'"',
             ]);
+
+            return $this->relativeIfServedByUs($url);
         } catch (\Throwable $e) {
             // Un archivo PROTEGIDO no puede degradar a URL pública permanente.
             //
@@ -67,12 +102,9 @@ class ComponentFile extends Model
             }
 
             // readme/preview son públicos por definición: aquí la URL permanente
-            // es la correcta. Relativa (/storage/...) para que funcione detrás
-            // del proxy de Vite sin depender del puerto de APP_URL.
+            // es la correcta.
             try {
-                $url = $disk->url($this->path);
-
-                return parse_url($url, PHP_URL_PATH) ?: $url;
+                return $this->relativeIfServedByUs($disk->url($this->path));
             } catch (\Throwable) {
                 return '/storage/'.ltrim($this->path, '/');
             }

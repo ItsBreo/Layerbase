@@ -9,11 +9,11 @@
  * En modo edición, si el componente está publicado el formulario se bloquea:
  * hay que despublicarlo antes de poder editarlo (regla de la ComponentPolicy).
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm, useWatch } from 'react-hook-form'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Eye, Image as ImageIcon, Loader2, Upload } from 'lucide-react'
+import { ArrowLeft, Eye, Image as ImageIcon, Loader2, TriangleAlert, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/Button'
@@ -30,6 +30,8 @@ import {
   componentKeys,
   useCategories,
   useComponent,
+  usePreviewCode,
+  useReadmeText,
   useUnpublishComponent,
 } from '@/studio/hooks'
 import { codeToSourceFile, readmeToFile } from '@/studio/zip'
@@ -102,6 +104,56 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
     }
   }, [mode, existing, reset])
 
+  /*
+   * Hidratación del código y del README guardados (solo en edición).
+   *
+   * Antes el formulario arrancaba con los dos editores VACÍOS y nunca cargaba
+   * lo que ya había subido el autor: abrir "Editar" parecía haber perdido el
+   * código. No destruía nada (al guardar solo se sube lo que tenga contenido,
+   * ver `onSubmit`), pero era imposible retocar lo publicado.
+   *
+   * Dos reglas al hidratar:
+   *
+   * 1. **Nunca se pisa lo que el autor haya escrito.** Las descargas tardan, y
+   *    si alguien empieza a teclear antes de que lleguen, sus cambios ganan.
+   * 2. **Un fallo al leer no se oculta.** Si el ZIP no se puede descomprimir
+   *    (p. ej. uno comprimido subido por la API, que `unzipFirstTextFile` no
+   *    admite), el editor se queda vacío pero se avisa en pantalla: dejarlo así
+   *    conserva el archivo actual, escribir algo lo reemplaza.
+   */
+  const savedCode = usePreviewCode(slug, mode === 'edit' && existing?.has_source === true)
+  const readmeUrl = existing?.files?.find((file) => file.type === 'readme')?.url
+  const savedReadme = useReadmeText(mode === 'edit' ? readmeUrl : undefined)
+
+  // `touched` marca que el autor ya escribió; `hydrated`, que ya se volcó lo
+  // guardado. Con cualquiera de los dos, no se vuelve a tocar el editor.
+  const codeTouched = useRef(false)
+  const codeHydrated = useRef(false)
+  const readmeTouched = useRef(false)
+  const readmeHydrated = useRef(false)
+
+  useEffect(() => {
+    if (codeHydrated.current || codeTouched.current || savedCode.data === undefined) return
+    codeHydrated.current = true
+    setCode(savedCode.data)
+  }, [savedCode.data])
+
+  useEffect(() => {
+    if (readmeHydrated.current || readmeTouched.current || savedReadme.data === undefined) return
+    readmeHydrated.current = true
+    setReadme(savedReadme.data)
+  }, [savedReadme.data])
+
+  const handleCodeChange = (value: string) => {
+    codeTouched.current = true
+    setCode(value)
+  }
+
+  const handleReadmeChange = (value: string) => {
+    readmeTouched.current = true
+    setReadme(value)
+  }
+
   const isPublished = existing?.status === 'published'
   const locked = mode === 'edit' && isPublished
 
@@ -126,7 +178,14 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
           ? await componentsApi.create(payload)
           : await componentsApi.update(slug as string, payload)
 
-      // Subida de archivos derivados (best-effort, tras guardar la metadata).
+      /*
+       * Subida de archivos derivados, tras guardar la metadata.
+       *
+       * Que solo se suban si tienen contenido NO es un detalle: es lo que
+       * garantiza que un editor vacío conserve el archivo que ya había. Si
+       * alguna descarga falló al abrir el formulario, guardar no destruye nada
+       * (ver la hidratación, arriba). No conviertas esto en un `else` que borre.
+       */
       if (code.trim()) {
         await componentsApi.uploadFile(component.slug, codeToSourceFile(code, values.stack), 'source')
       }
@@ -294,9 +353,11 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
 
           {/* Código */}
           <Section title={t('studio.form.sectionCode')}>
+            {savedCode.isLoading && <LoadingNotice text={t('studio.form.loadingCode')} />}
+            {savedCode.isError && <FailedNotice text={t('studio.form.codeLoadFailed')} />}
             <CodeEditor
               value={code}
-              onChange={setCode}
+              onChange={handleCodeChange}
               stack={stack}
               label={t('studio.form.codeLabel')}
               hint={t('studio.form.codeHint')}
@@ -305,9 +366,11 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
 
           {/* README */}
           <Section title={t('studio.form.sectionReadme')}>
+            {savedReadme.isLoading && <LoadingNotice text={t('studio.form.loadingReadme')} />}
+            {savedReadme.isError && <FailedNotice text={t('studio.form.readmeLoadFailed')} />}
             <MarkdownEditor
               value={readme}
-              onChange={setReadme}
+              onChange={handleReadmeChange}
               hint={t('studio.form.readmeHint')}
               placeholder={'# Título\n\nCómo se usa este componente…'}
             />
@@ -430,6 +493,32 @@ function CoverField({
         </div>
       </div>
     </FieldShell>
+  )
+}
+
+/** Aviso mientras se descarga lo que el autor ya tenía guardado. */
+function LoadingNotice({ text }: { text: string }) {
+  return (
+    <p className="mb-3 inline-flex items-center gap-2 text-sm text-muted">
+      <Loader2 className="size-3.5 animate-spin" />
+      {text}
+    </p>
+  )
+}
+
+/**
+ * Aviso de que no se ha podido leer el archivo guardado.
+ *
+ * Se muestra en vez de dejar el editor vacío sin explicación: sin esto, el
+ * autor pensaría que ha perdido su trabajo. Deja claro además cuál es la
+ * consecuencia de cada opción.
+ */
+function FailedNotice({ text }: { text: string }) {
+  return (
+    <div className="mb-3 flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+      <p>{text}</p>
+    </div>
   )
 }
 

@@ -10,7 +10,7 @@
  *    firmada), lo descomprime y muestra el código real.
  */
 import { motion } from 'framer-motion'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, TriangleAlert } from 'lucide-react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppShell } from '@/components/AppShell'
 import { useI18n } from '@/i18n/useI18n'
@@ -36,15 +36,26 @@ export default function ComponentPreview() {
   const state = (location.state as PreviewState | null) ?? {}
 
   // Componente guardado (si hay slug en la ruta).
-  const { data: component } = useComponent(slug)
+  const { data: component, isLoading: loadingComponent } = useComponent(slug)
 
   // Código del componente guardado, por el mismo camino que usa la ficha
   // pública. Solo se pide si NO hay código en el state (borrador sin guardar).
   const draftCode = state.code?.trim()
-  const savedSource = usePreviewCode(slug, !draftCode && !!component?.has_source)
+  const savedSource = usePreviewCode(slug, !draftCode && component?.has_source === true)
 
   const stack: Stack = state.stack ?? component?.stack ?? 'react'
-  const isLoadingCode = !draftCode && !!slug && savedSource.isLoading && !!component?.has_source
+
+  /*
+   * Se espera también a que llegue el COMPONENTE, no solo su código: hasta
+   * entonces no se sabe si tiene fuente que descargar, y el sandbox se montaba
+   * con el código de relleno ("Tu componente aquí") para sustituirlo un
+   * instante después. Ese parpadeo parecía que el componente estaba vacío.
+   */
+  const isLoadingCode =
+    !draftCode && !!slug && (loadingComponent || (savedSource.isLoading && component?.has_source === true))
+
+  // Un fallo al descargar no puede disfrazarse de componente vacío: se avisa.
+  const loadFailed = !draftCode && savedSource.isError
   const code = draftCode || savedSource.data || DEFAULT_CODE
 
   return (
@@ -77,9 +88,17 @@ export default function ComponentPreview() {
             <Loader2 className="size-6 animate-spin text-muted" />
           </div>
         ) : (
-          <div className="mt-8 overflow-hidden rounded-lg border border-border">
-            <ComponentSandbox code={code} withEditor height={480} />
-          </div>
+          <>
+            {loadFailed && (
+              <div className="mt-8 flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                <p>{t('studio.preview.loadFailed')}</p>
+              </div>
+            )}
+            <div className="mt-8 overflow-hidden rounded-lg border border-border">
+              <ComponentSandbox code={code} withEditor height={480} />
+            </div>
+          </>
         )}
       </main>
     </AppShell>

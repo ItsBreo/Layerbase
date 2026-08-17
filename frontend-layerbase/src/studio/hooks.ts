@@ -106,6 +106,29 @@ export function usePreviewCode(idOrSlug: string | undefined, enabled = true) {
   })
 }
 
+/**
+ * Texto del README guardado, para poder editarlo.
+ *
+ * El README sí tiene URL pública y permanente en `files` (al contrario que el
+ * código, que va por URL firmada), así que basta con descargarlo.
+ *
+ * `retry: false` a propósito: si el archivo no está o no se puede leer, el
+ * formulario avisa y deja el editor vacío. Reintentar no lo va a arreglar.
+ */
+export function useReadmeText(url: string | undefined) {
+  return useQuery({
+    queryKey: ['components', 'readme-text', url ?? ''],
+    queryFn: async () => {
+      const res = await fetch(url as string)
+      if (!res.ok) throw new Error('No se pudo descargar el README.')
+      return res.text()
+    },
+    enabled: !!url,
+    retry: false,
+    staleTime: 1000 * 60 * 10,
+  })
+}
+
 export function useCategories(stack?: Stack) {
   return useQuery({
     queryKey: componentKeys.categories(stack),

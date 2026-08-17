@@ -67,6 +67,31 @@ class ProtectedFileUrlTest extends TestCase
         $this->assertStringContainsString('signature=', $file->temporaryUrl());
     }
 
+    public function test_a_local_url_comes_back_relative_so_the_browser_can_reach_it(): void
+    {
+        $url = $this->fileOfType(ComponentFileType::Source, disk: 'local')->temporaryUrl();
+
+        // En Docker, el SPA llega por el proxy de Vite y Laravel ve el host
+        // INTERNO (`nginx`), con el que firmaba la URL. El navegador recibía
+        // `http://nginx/storage/...`, un host que no puede resolver: la descarga
+        // fallaba en silencio y el editor y la vista previa salían vacíos.
+        $this->assertStringStartsWith('/', $url);
+        $this->assertStringNotContainsString('://', $url);
+        // La firma tiene que sobrevivir al recorte del host.
+        $this->assertStringContainsString('signature=', $url);
+        $this->assertStringContainsString('expires=', $url);
+    }
+
+    public function test_a_public_file_url_is_also_relative(): void
+    {
+        // Mismo motivo: el README se descarga desde el navegador para poder
+        // editarlo, así que tampoco puede apuntar al host interno.
+        $url = $this->fileOfType(ComponentFileType::Readme, disk: 'local')->temporaryUrl();
+
+        $this->assertStringStartsWith('/', $url);
+        $this->assertStringNotContainsString('://', $url);
+    }
+
     /** Fila de archivo suelta: no hace falta componente para resolver la URL. */
     private function fileOfType(ComponentFileType $type, string $disk = 'sin_firma'): ComponentFile
     {
