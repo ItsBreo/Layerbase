@@ -20,6 +20,7 @@ import OAuthCallback from '@/auth/OAuthCallback'
 import VerifyEmail from '@/auth/VerifyEmail'
 import PublicProfile from '@/profile/PublicProfile'
 import { BillingPage, CookiesPage, PrivacyPage, TermsPage } from '@/legal/pages'
+import { BestPracticesPage, DocsPage, PublishingPage } from '@/resources/pages'
 import Home from '@/pages/Home'
 import Dashboard from '@/pages/Dashboard'
 import AdminPanel from '@/pages/AdminPanel'
@@ -53,6 +54,11 @@ export default function App() {
       <Route path="/components" element={<Explore />} />
       <Route path="/components/:slug" element={<ComponentDetail />} />
       <Route path="/users/:id" element={<PublicProfile />} />
+
+      {/* Recursos: cómo funciona la plataforma y cómo publicar en ella. */}
+      <Route path="/resources/docs" element={<DocsPage />} />
+      <Route path="/resources/publishing" element={<PublishingPage />} />
+      <Route path="/resources/best-practices" element={<BestPracticesPage />} />
 
       {/* Legales. Estructura montada; el texto jurídico está sin redactar y
           cada sección lo avisa en pantalla. */}

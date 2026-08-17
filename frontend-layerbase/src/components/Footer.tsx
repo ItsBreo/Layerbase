@@ -34,9 +34,9 @@ export function Footer() {
     {
       title: t('footer.resources'),
       links: [
-        { label: t('footer.links.docs'), to: '#' },
-        { label: t('footer.links.tutorials'), to: '#' },
-        { label: t('footer.links.bestPractices'), to: '#' },
+        { label: t('footer.links.docs'), to: '/resources/docs' },
+        { label: t('footer.links.tutorials'), to: '/resources/publishing' },
+        { label: t('footer.links.bestPractices'), to: '/resources/best-practices' },
       ],
     },
     {

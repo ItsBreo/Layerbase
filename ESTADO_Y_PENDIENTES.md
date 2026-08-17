@@ -23,6 +23,8 @@
 | 3.1 | Páginas legales: estructura y rutas (texto pendiente de redactar) | bloque 4 |
 | — | Verificación de email (no existía; era requisito de 1.1) | bloque 1 |
 | 1.4 | Un admin podía aprobar su propio componente | bloque 6 |
+| — | Las tablas de los README se pintaban como texto con barras (faltaba `remark-gfm`) | bloque 7 |
+| 3.3 | Recursos del footer: las tres páginas, escritas | bloque 7 |
 | — | Sin CI: nada ejecutaba la suite automáticamente | bloque 6 |
 | — | 3 errores + 2 avisos de ESLint | bloque 6 |
 
@@ -142,6 +144,23 @@ nada: es configuración muerta.
 `ComponentController::destroy()` hace soft delete del componente, pero los ficheros siguen
 en disco y en `component_files`. Con S3/R2 eso es dinero cada mes por objetos que ya no
 referencia nadie.
+
+### 2.5 El ZIP del código solo admite UN archivo y sin comprimir
+
+**Dónde:** `src/studio/zip.ts` y `src/studio/ComponentForm.tsx`.
+
+Descubierto al documentar el flujo de publicación. `zipTextFile()` genera un ZIP de **un
+único archivo con método STORE** (sin compresión), y `unzipFirstTextFile()` **lanza
+excepción con DEFLATE** — que es lo que produce cualquier herramienta normal de compresión.
+
+Hoy no rompe nada porque el formulario **no deja subir un ZIP propio**: el código se escribe
+en Monaco y se empaqueta solo. Pero la API sí acepta cualquier `application/zip`, así que un
+ZIP subido por otra vía se descargaría bien y **reventaría el render en vivo**.
+
+La limitación de fondo es de producto: **un componente real suele tener varios ficheros**
+(componente, estilos, tipos, tests) y hoy solo cabe uno. Va a hacer falta una librería de
+verdad (jszip) y soporte multi-archivo en el editor. Documentado como limitación en
+`/resources/docs` mientras tanto.
 
 ### 2.4 `hasPurchases()` devuelve siempre `false`
 
