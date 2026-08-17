@@ -13,6 +13,7 @@
  */
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { ArrowDown, ArrowRight } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { useI18n } from '@/i18n/useI18n'
@@ -77,16 +78,24 @@ export function ResourcePage({ doc, sections }: { doc: string; sections: string[
           <p className="font-mono text-xs uppercase tracking-[0.15em] text-muted">
             {t('resources.contents')}
           </p>
-          <ol className="mt-3 space-y-1.5">
+          {/* Cada entrada ocupa toda la fila y se ilumina al pasar por encima:
+              con enlaces sueltos no se veía dónde se podía pulsar. La flecha
+              avanza un par de píxeles para reforzar que lleva a algún sitio. */}
+          <ol className="mt-3 space-y-0.5">
             {sections.map((key, index) => (
               <li key={key}>
                 <a
                   href={`#${key}`}
                   onClick={(event) => scrollToSection(event, key)}
-                  className="text-sm text-muted transition hover:text-accent"
+                  className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted transition-colors hover:bg-navy-50 hover:text-text"
                 >
-                  <span className="mr-2 font-mono text-xs">{index + 1}.</span>
-                  {t(`resources.${doc}.sections.${key}`)}
+                  <span className="font-mono text-xs text-accent">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {t(`resources.${doc}.sections.${key}`)}
+                  </span>
+                  <ArrowDown className="size-3.5 shrink-0 text-accent opacity-0 transition-all group-hover:translate-y-0.5 group-hover:opacity-100" />
                 </a>
               </li>
             ))}
@@ -112,10 +121,24 @@ export function ResourcePage({ doc, sections }: { doc: string; sections: string[
           <p className="font-mono text-xs uppercase tracking-[0.15em] text-muted">
             {t('resources.keepReading')}
           </p>
-          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+          {/* Tarjetas y no enlaces sueltos: al final de una página larga hay que
+              ver a dónde se puede seguir, no buscar dos textos en azul. */}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {RESOURCES.filter((r) => r.doc !== doc).map((r) => (
-              <Link key={r.doc} to={r.to} className="text-sm text-accent hover:underline">
-                {t(`resources.${r.doc}.title`)}
+              <Link
+                key={r.doc}
+                to={r.to}
+                className="group rounded-lg border border-border bg-surface p-4 transition-colors hover:border-navy-200 hover:shadow-hover"
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="font-display font-semibold text-text transition-colors group-hover:text-accent">
+                    {t(`resources.${r.doc}.title`)}
+                  </span>
+                  <ArrowRight className="size-4 shrink-0 text-accent transition-transform group-hover:translate-x-0.5" />
+                </span>
+                <span className="mt-1.5 line-clamp-2 block text-sm text-muted">
+                  {t(`resources.${r.doc}.intro`)}
+                </span>
               </Link>
             ))}
           </div>

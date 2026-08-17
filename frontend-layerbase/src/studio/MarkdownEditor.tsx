@@ -96,7 +96,7 @@ function TabButton({
  */
 export function MarkdownBody({ source }: { source: string }) {
   return (
-    <div className="space-y-3 leading-relaxed [&_a]:text-accent [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_code]:font-mono [&_code]:text-xs [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_li]:ml-4 [&_li]:list-disc [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-bg [&_pre]:p-3 [&_table]:w-full [&_table]:text-sm [&_td]:border-b [&_td]:border-border/60 [&_td]:py-2 [&_td]:pr-4 [&_th]:border-b [&_th]:border-border [&_th]:py-2 [&_th]:pr-4 [&_th]:text-left [&_th]:font-semibold [&_th]:text-text">
+    <div className="space-y-3 leading-relaxed [&_a:hover]:decoration-accent [&_a]:text-accent [&_a]:underline [&_a]:decoration-accent/40 [&_a]:underline-offset-2 [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-3 [&_code]:font-mono [&_code]:text-xs [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_li]:ml-4 [&_li]:list-disc [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-bg [&_pre]:p-3 [&_table]:w-full [&_table]:text-sm [&_td]:border-b [&_td]:border-border/60 [&_td]:py-2 [&_td]:pr-4 [&_th]:border-b [&_th]:border-border [&_th]:py-2 [&_th]:pr-4 [&_th]:text-left [&_th]:font-semibold [&_th]:text-text">
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{
