@@ -14,6 +14,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     networks:
       - layerbase
     # No expone puertos: Nginx habla con él por la red interna (app:9000).
@@ -76,6 +78,31 @@ services:
       - /app/node_modules
     depends_on:
       - nginx
+    networks:
+      - layerbase
+
+  # ---------------------------------------------------------------------------
+  # Mailpit — servidor SMTP de desarrollo
+  # ---------------------------------------------------------------------------
+  # Captura TODO el correo que manda la aplicación y lo enseña en una bandeja
+  # de entrada web. Nada sale a internet: se pueden probar verificaciones y
+  # notificaciones sin riesgo de escribir a direcciones reales.
+  #
+  # Sustituye al driver `log`, que obligaba a rebuscar el enlace de
+  # verificación entre las líneas del fichero de log.
+  #
+  # SOLO desarrollo. En producción va un proveedor real (Resend, Postmark,
+  # SES) con SPF y DKIM configurados en el DNS, o los correos acaban en spam.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      # 8025 = bandeja web. 1025 = SMTP, al que apunta MAIL_PORT.
+      - "8025:8025"
+      - "1025:1025"
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
     networks:
       - layerbase
 
