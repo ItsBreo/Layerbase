@@ -57,6 +57,18 @@ class ComponentController extends Controller
             $this->authorize('view', $component);
         }
 
+        /*
+         * Visita contabilizada solo si es una visita de verdad: el componente
+         * está publicado y quien mira no es su autor.
+         *
+         * Excluir al autor no es un detalle: entra en su propia ficha
+         * constantemente mientras la prepara, y sin este filtro la métrica
+         * mediría sobre todo su actividad en vez del interés real.
+         */
+        if ($component->isPublished() && ! $component->isOwnedBy($request->user())) {
+            $component->recordView();
+        }
+
         $component->load(['author', 'category', 'tags', 'files']);
 
         return new ComponentResource($component);

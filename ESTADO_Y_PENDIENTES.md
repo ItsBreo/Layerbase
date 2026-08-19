@@ -29,6 +29,8 @@
 | — | 3 errores + 2 avisos de ESLint | bloque 6 |
 | — | La URL firmada apuntaba al host interno de Docker: descargas y preview rotos en el navegador | bloque 7 |
 | — | El formulario de edición nunca cargaba el código ni el README guardados | bloque 7 |
+| 3.4 (mitad) | Métricas del panel de admin | sesión A |
+| — | `component_views`: sin analítica de visitas | sesión A |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 

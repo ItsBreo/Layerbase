@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import type { UserRole } from '@/auth/types'
 import { getErrorMessage } from '@/lib/api'
 import { useI18n } from '@/i18n/useI18n'
-import { adminUsersApi, type UserFilters } from '@/admin/api'
+import { adminMetricsApi, adminUsersApi, type UserFilters } from '@/admin/api'
 
 export const adminUserKeys = {
   all: ['admin', 'users'] as const,
@@ -73,4 +73,15 @@ export function useUnbanUser() {
     (id: number) => adminUsersApi.unban(id),
     'admin.users.toast.unbanned',
   )
+}
+
+export const adminMetricsKey = ['admin', 'metrics'] as const
+
+/** Resumen de la plataforma. Sin refetch agresivo: no es un panel en vivo. */
+export function useAdminMetrics() {
+  return useQuery({
+    queryKey: adminMetricsKey,
+    queryFn: () => adminMetricsApi.get(),
+    staleTime: 1000 * 60,
+  })
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\MetricsController;
 use App\Http\Controllers\Api\Admin\ModerationController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\Auth\AuthSessionController;
@@ -85,6 +86,9 @@ Route::prefix('auth')->group(function () {
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::middleware('role:admin')->prefix('admin')->group(function () {
         Route::get('ping', fn () => response()->json(['message' => 'admin ok']))->name('admin.ping');
+
+        // Resumen de la plataforma (solo lectura).
+        Route::get('metrics', [MetricsController::class, 'index'])->name('admin.metrics');
 
         // --- Moderación ---
         // Cola de revisión (lectura) + las dos transiciones que solo un admin

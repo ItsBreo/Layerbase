@@ -7,7 +7,7 @@
  */
 import { api } from '@/lib/api'
 import type { User, UserRole } from '@/auth/types'
-import type { Paginated } from '@/studio/types'
+import type { ComponentStatus, Paginated } from '@/studio/types'
 
 /** Filtros del listado de usuarios. */
 export interface UserFilters {
@@ -55,6 +55,45 @@ export const adminUsersApi = {
 
   async unban(id: number): Promise<User> {
     const { data } = await api.post<{ message: string; data: User }>(`/admin/users/${id}/unban`)
+    return data.data
+  },
+}
+
+/** Resumen de la plataforma (solo lectura, solo admin). */
+export interface PlatformMetrics {
+  window_days: number
+  users: {
+    total: number
+    banned: number
+    unverified: number
+    recent: number
+    roles: Record<UserRole, number>
+  }
+  components: {
+    total: number
+    downloads: number
+    published_recent: number
+    statuses: Record<ComponentStatus, number>
+  }
+  activity: {
+    views_total: number
+    views_recent: number
+    /** Solo los días CON visitas; los huecos los rellena el frontend. */
+    daily_views: Record<string, number>
+  }
+  top_components: Array<{
+    slug: string
+    title: string
+    author: string | null
+    views: number
+    downloads: number
+  }>
+  top_authors: Array<{ id: number; name: string; components: number }>
+}
+
+export const adminMetricsApi = {
+  async get(): Promise<PlatformMetrics> {
+    const { data } = await api.get<{ data: PlatformMetrics }>('/admin/metrics')
     return data.data
   },
 }

@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -256,6 +257,35 @@ class Component extends Model
     public function hasPurchases(): bool
     {
         return false;
+    }
+
+    /** @return HasMany<ComponentView, $this> */
+    public function views(): HasMany
+    {
+        return $this->hasMany(ComponentView::class);
+    }
+
+    /**
+     * Suma una visita al contador del día de hoy.
+     *
+     * Se resuelve con un único `INSERT ... ON CONFLICT DO UPDATE` en vez de
+     * leer-modificar-guardar: dos visitas simultáneas al mismo componente no
+     * se pisan, y no hace falta una consulta previa. El `upsert()` de Eloquent
+     * no sirve aquí porque ASIGNA el valor en el conflicto, y lo que se necesita
+     * es incrementarlo.
+     *
+     * `count` va entre comillas por ser también el nombre de una función SQL.
+     * La sintaxis vale igual en PostgreSQL (el entorno real) y en SQLite (los
+     * tests).
+     */
+    public function recordView(): void
+    {
+        DB::statement(
+            'INSERT INTO component_views (component_id, viewed_on, "count") VALUES (?, ?, 1)
+             ON CONFLICT (component_id, viewed_on)
+             DO UPDATE SET "count" = component_views."count" + 1',
+            [$this->id, now()->toDateString()],
+        );
     }
 
     /** Archivo de un tipo concreto (o null si no se ha subido). */
