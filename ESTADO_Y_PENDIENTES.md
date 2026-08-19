@@ -38,6 +38,9 @@
 | — | Correo real en desarrollo (Mailpit) | sesión D |
 | — | Notificaciones in-app: los 3 `TODO` de moderación, cerrados | sesión E |
 | 2.5 | Multi-archivo: el ZIP admitía un solo fichero y sin comprimir | sesión F |
+| 4.x | Búsqueda: `LIKE '%…%'` sustituido por texto completo de PostgreSQL | sesión G |
+| — | La suite corría en SQLite y no en el motor real | sesión G |
+| — | Las búsquedas por nombre distinguían mayúsculas en producción (`LIKE` vs `ILIKE`) | sesión G |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 
@@ -129,7 +132,9 @@ por iniciativa propia.
   y los `stripe_*` están fuera de `$fillable` y solo se asignan desde código de confianza.
 - **Rate limiting**: `auth` a 6/min por (email + IP), `api` a 60/min.
 - **CORS**: orígenes por entorno, nunca `*` con credenciales.
-- **Búsquedas**: se escapan `%` y `_` antes del `LIKE`.
+- **Búsquedas**: la del marketplace va por `websearch_to_tsquery`, que trata la entrada
+  como texto y no como sintaxis (no revienta ni se puede inyectar operadores). Las que
+  siguen con `ILIKE` (usuarios, etiquetas) escapan `%` y `_` antes.
 - **Subidas**: límite real de 5 MB, nombre en disco aleatorio, MIME por contenido para zip
   e imagen.
 
@@ -219,7 +224,6 @@ Detalle completo, con los formatos y límites ya verificados contra el código, 
 | **Verificación de email** | No existe | Es parte del arreglo de 1.1, no un extra |
 | **Compras / Stripe** | `stripe/stripe-php` instalado, **cero usos** | Sin esto los componentes de pago no se pueden comprar |
 | **Reviews** | Sin tabla ni modelo | `rating_avg` y `rating_count` existen y nadie los escribe |
-| **Búsqueda Meilisearch** | Scout instalado, **cero usos** | Los filtros son SQL puro |
 | **Notificaciones** | Sin tabla | 3 `TODO` esperándola en la moderación |
 | **`component_views`** | Sin tabla | Sin analítica de visitas |
 | **Observers** | Ninguno | Los contadores desnormalizados no los mantiene nadie |
@@ -244,7 +248,15 @@ Detalle completo, con los formatos y límites ya verificados contra el código, 
   este fichero está en la **raíz** y no en `documents/`. Merece una decisión consciente: si
   se ignoró `/documents` por el peso de los `.docx` y `.html`, se puede ignorar por
   extensión y dejar el Markdown dentro.
-- **Sin CI.** Nada ejecuta la suite automáticamente.
+- **19 avisos de seguridad en dependencias** (`composer audit`), uno de severidad
+  **alta**: `guzzlehttp/guzzle`, `guzzlehttp/psr7`, `league/commonmark`,
+  `mtdowling/jmespath.php` y `phpseclib/phpseclib`. Son transitivas (ninguna se pide
+  directamente) y el arreglo es un `composer update` de esos cinco paquetes, pero
+  conviene hacerlo con la suite delante y **antes de desplegar**.
+- ~~**Sin CI.**~~ Resuelto: `.github/workflows/ci.yml` corre Pint + la suite (contra
+  PostgreSQL) y ESLint + build del frontend.
+- ~~**La suite corría en SQLite**~~ mientras producción va en PostgreSQL. Resuelto en la
+  sesión G.
 
 ---
 
@@ -377,17 +389,65 @@ email del bloque 1).
 
 ---
 
-### Sesión F — Búsqueda con Meilisearch
+### Sesión F — Multi-archivo ✅
 
-*Una sesión, con infraestructura.*
-
-Scout está en `composer.json` con cero usos y los filtros de
-`ComponentController::index` son SQL puro. **Meilisearch no está en
-`docker-compose.yml`**, así que hay que levantarlo primero.
+*Hecha.* Un componente ya no es un solo fichero: el ZIP guarda un árbol, el
+editor tiene pestañas y el sandbox monta todos los ficheros. Compatible con los
+componentes ya subidos. Backend sin tocar — el ZIP le es opaco.
 
 ---
 
-### Sesión G+ — Compras / Stripe
+### Sesión G — Búsqueda ✅
+
+*Hecha. Sin Meilisearch, y esa fue la decisión de la sesión.*
+
+Meilisearch se evaluó y se descartó: es un servicio siempre encendido, con disco
+persistente, que mantiene una **copia** de los datos. Esa copia hay que
+sincronizarla y filtrarla por estado, con el riesgo de que un borrador o un
+componente rechazado acabe saliendo en el buscador público. Y no encaja con el
+despliegue previsto (Cloud Run levanta y apaga instancias con disco efímero), así
+que habría significado o Meilisearch Cloud o una VM aparte que mantener.
+
+En su lugar, búsqueda de texto completo de **PostgreSQL**, que ya estaba en el
+stack:
+
+- Columna generada `components.search_vector`, con el **título pesando más** que
+  la descripción, sin acentos (`f_unaccent`) y lematizada en español. La mantiene
+  PostgreSQL sola en cada INSERT/UPDATE: no hay nada que sincronizar.
+- Índice **GIN**: el `LIKE '%término%'` anterior no podía usar índice porque el
+  comodín inicial obliga a recorrer la tabla entera.
+- **Plan B por trigramas** (`word_similarity`) cuando la búsqueda exacta no
+  devuelve nada, que es lo que hace que "carusel" encuentre "Carousel". Umbral en
+  `config/components.php`, medido contra el catálogo real.
+- `websearch_to_tsquery` en vez de `plainto_tsquery`: entiende comillas para
+  frase exacta, `-excluir` y `or`, y no falla con lo que sea que teclee alguien.
+- Sigue siendo la misma query sobre la misma tabla, así que `published()`, los
+  filtros, la paginación y las policies aplican sin tocar nada.
+- `laravel/scout` y `meilisearch/meilisearch-php` **fuera del `composer.json`**.
+
+Frontera en `tests/Feature/Component/SearchTest.php` (17 casos).
+
+#### Lo que arrastró: la suite dejó de correr en SQLite
+
+Los tests iban en SQLite `:memory:` y producción en PostgreSQL. Eso ya había
+escondido un bug real (los NULL se ordenan al revés en un `ORDER BY DESC`, así
+que los componentes sin visitas encabezaban "más vistos"), y con la búsqueda de
+texto completo pasaba a ser insostenible: `to_tsvector` no existe en SQLite.
+
+La suite corre ahora contra PostgreSQL — misma base de datos que producción,
+`layerbase_testing`, creada por `docker/postgres/init/` en entornos nuevos. En CI
+se levanta como servicio. Sigue tardando 4 s.
+
+**Y el cambio cazó un bug el primer día:** en PostgreSQL `LIKE` distingue
+mayúsculas y en SQLite no. Buscar "Jos" no encontraba a "josue" en el panel de
+usuarios, y el autocompletado de etiquetas no encontraba nada escrito en
+minúscula. Arreglado con `ILIKE` en `Admin\UserController`, `Admin\CatalogController`
+y `TagController`. El test que existía pasaba porque el término casaba con el
+**email**, nunca con el nombre.
+
+---
+
+### Sesión H+ — Compras / Stripe
 
 *Varias sesiones. El módulo grande.*
 

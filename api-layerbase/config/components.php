@@ -28,4 +28,30 @@ return [
     */
     'download_url_ttl' => (int) env('COMPONENTS_DOWNLOAD_TTL', 5),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Búsqueda
+    |--------------------------------------------------------------------------
+    |
+    | El buscador del listado usa la búsqueda de texto completo de PostgreSQL
+    | (columna generada `components.search_vector`, con el título pesando más
+    | que la descripción).
+    |
+    | Cuando esa búsqueda no devuelve NADA se intenta una segunda pasada por
+    | similitud de trigramas sobre el título, que es lo que permite que
+    | "carusel" encuentre "Carousel". El umbral decide cuánto se parece algo
+    | para considerarse un acierto:
+    |
+    |   - más bajo  → más tolerante, más ruido
+    |   - más alto  → menos ruido, más "no hay resultados"
+    |
+    | 0.4 está medido contra el catálogo real: separa los aciertos (0.55-0.60)
+    | del ruido (0.20-0.38). Es un valor a reajustar si el catálogo cambia de
+    | tamaño o de idioma.
+    |
+    */
+    'search' => [
+        'fuzzy_threshold' => (float) env('COMPONENTS_SEARCH_FUZZY_THRESHOLD', 0.4),
+    ],
+
 ];

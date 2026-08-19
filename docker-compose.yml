@@ -34,6 +34,9 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Scripts de inicialización: solo corren al crear el volumen desde cero.
+      # Crean `layerbase_testing`, la base de datos de la suite de tests.
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U layerbase -d layerbase"]
       interval: 5s

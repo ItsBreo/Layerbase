@@ -21,7 +21,10 @@ class TagController extends Controller
 
         if ($request->filled('q')) {
             $term = str_replace(['%', '_'], ['\%', '\_'], (string) $request->input('q'));
-            $query->where('name', 'like', $term.'%');
+            // `ilike`: en PostgreSQL `LIKE` distingue mayúsculas, y el
+            // autocompletado de tags se escribe casi siempre en minúscula
+            // mientras los nombres guardados van capitalizados.
+            $query->where('name', 'ilike', $term.'%');
         }
 
         return TagResource::collection($query->limit(20)->get());

@@ -118,7 +118,8 @@ class CatalogController extends Controller
 
         if ($request->filled('q')) {
             $term = str_replace(['%', '_'], ['\%', '\_'], (string) $request->input('q'));
-            $query->where('name', 'like', $term.'%');
+            // `ilike`: en PostgreSQL `LIKE` distingue mayúsculas.
+            $query->where('name', 'ilike', $term.'%');
         }
 
         return TagResource::collection($query->limit(200)->get());

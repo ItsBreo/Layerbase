@@ -379,6 +379,54 @@ class Component extends Model
         return $query->where('status', ComponentStatus::Published);
     }
 
+    /*
+     * Búsqueda de texto. Son dos scopes y no uno porque son dos búsquedas
+     * distintas con dos criterios distintos: `matching` es la buena y
+     * `resembling` el plan B cuando la primera no encuentra nada. Ver
+     * ComponentController::index, que es quien decide cuándo cae al plan B.
+     *
+     * Al ser scopes de Eloquent y no un motor aparte, se combinan con el resto
+     * de filtros del listado y — lo que importa — con `published()`. Un buscador
+     * que mantuviera su propio índice podría desincronizarse y acabar sacando
+     * borradores o componentes rechazados.
+     */
+
+    /**
+     * Coincidencia por texto completo sobre la columna generada
+     * `search_vector` (título con más peso que descripción, sin acentos y
+     * lematizado en español). Ordena por relevancia.
+     *
+     * `websearch_to_tsquery` y no `plainto_tsquery` porque esto viene de una
+     * caja de búsqueda de verdad: entiende "comillas para frase exacta",
+     * `-excluir` y `or`, y no revienta con cualquier cosa que teclee alguien.
+     */
+    public function scopeMatching(Builder $query, string $term): Builder
+    {
+        $tsquery = "websearch_to_tsquery('spanish', public.f_unaccent(?))";
+
+        return $query
+            ->whereRaw("search_vector @@ {$tsquery}", [$term])
+            ->orderByRaw("ts_rank(search_vector, {$tsquery}) DESC", [$term]);
+    }
+
+    /**
+     * Plan B: similitud de trigramas sobre el título, que es lo que hace que
+     * "carusel" encuentre "Carousel" y "modl" encuentre "Modal".
+     *
+     * Solo mira el título. Pasarle también la descripción daría coincidencias
+     * difusas sobre textos largos, que es una fábrica de falsos positivos: en un
+     * párrafo casi siempre hay algún fragmento que se parece a lo que sea.
+     */
+    public function scopeResembling(Builder $query, string $term): Builder
+    {
+        $similarity = 'word_similarity(public.f_unaccent(?), public.f_unaccent(title))';
+        $threshold = (float) config('components.search.fuzzy_threshold', 0.4);
+
+        return $query
+            ->whereRaw("{$similarity} >= ?", [$term, $threshold])
+            ->orderByRaw("{$similarity} DESC", [$term]);
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';

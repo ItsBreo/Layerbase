@@ -57,7 +57,9 @@ class UserController extends Controller
         if ($request->filled('q')) {
             $term = '%'.str_replace(['%', '_'], ['\%', '\_'], (string) $request->input('q')).'%';
             $query->where(function (Builder $q) use ($term): void {
-                $q->where('name', 'like', $term)->orWhere('email', 'like', $term);
+                // `ilike` y no `like`: en PostgreSQL `LIKE` distingue
+                // mayúsculas, así que buscar "Jos" no encontraba a "josue".
+                $q->where('name', 'ilike', $term)->orWhere('email', 'ilike', $term);
             });
         }
 

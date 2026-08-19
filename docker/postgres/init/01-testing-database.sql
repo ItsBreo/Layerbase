@@ -1,0 +1,12 @@
+-- Base de datos exclusiva para la suite de tests.
+--
+-- Los tests corrían en SQLite :memory:, que es rápido pero MIENTE: no tiene
+-- `to_tsvector` ni `pg_trgm`, y ordena los NULL al revés que PostgreSQL. Ese
+-- desajuste ya escondió un bug real (los componentes sin visitas salían los
+-- primeros en "más vistos"). Desde el buscador de texto completo, la suite
+-- necesita el motor de verdad.
+--
+-- Este script solo se ejecuta cuando el volumen de datos se crea desde cero.
+-- En un entorno ya levantado hay que crearla a mano:
+--   docker compose exec db createdb -U layerbase layerbase_testing
+CREATE DATABASE layerbase_testing OWNER layerbase;

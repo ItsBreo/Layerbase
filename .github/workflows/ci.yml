@@ -22,6 +22,36 @@ jobs:
       run:
         working-directory: api-layerbase
 
+    # La suite corre contra PostgreSQL, el mismo motor que producción. Antes
+    # usaba SQLite en memoria: más rápido de arrancar, pero con otro orden de
+    # NULL y sin búsqueda de texto completo, así que había tests en verde que no
+    # probaban lo que decían probar.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: layerbase_testing
+          POSTGRES_USER: layerbase
+          POSTGRES_PASSWORD: LayerBase_2026
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U layerbase"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Las variables de entorno del job ganan al .env: Laravel carga dotenv en
+    # modo inmutable, así que no pisa lo que ya existe en el entorno. Por eso
+    # `DB_HOST=db` del .env.example no rompe aquí.
+    env:
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: layerbase_testing
+      DB_USERNAME: layerbase
+      DB_PASSWORD: LayerBase_2026
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,9 +59,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          # sqlite: los tests corren en :memory: (ver phpunit.xml), así que no
-          # hace falta levantar PostgreSQL en CI.
-          extensions: mbstring, pdo, pdo_sqlite, sqlite3, zip, gd, intl
+          extensions: mbstring, pdo, pdo_pgsql, zip, gd, intl
           coverage: none
 
       - name: Cachear dependencias de Composer

@@ -64,6 +64,34 @@ class UserManagementTest extends TestCase
             ->assertJsonPath('data.0.name', 'Grace Hopper');
     }
 
+    public function test_the_user_search_ignores_capitalisation(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'name' => 'Quien administra',
+            'email' => 'admin@test.com',
+        ]);
+        User::factory()->create(['name' => 'Ada Lovelace', 'email' => 'ada@test.com']);
+
+        /*
+         * En PostgreSQL `LIKE` distingue mayúsculas y en SQLite no, así que este
+         * caso estuvo roto en producción sin que nadie lo viera: el test de
+         * arriba busca "ada" en minúscula y pasaba por el EMAIL, nunca por el
+         * nombre. Buscar "Ada" no encontraba a "Ada Lovelace".
+         */
+        $this->actingAs($admin)->getJson('/api/admin/users?q=Lovelace')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Ada Lovelace');
+
+        $this->actingAs($admin)->getJson('/api/admin/users?q=LOVELACE')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->actingAs($admin)->getJson('/api/admin/users?q=ADA@TEST.COM')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
     public function test_the_listing_filters_by_role_and_by_banned(): void
     {
         $admin = User::factory()->admin()->create();

@@ -23,8 +23,22 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            La suite corre contra PostgreSQL, el mismo motor que producción, y
+            NO contra SQLite en memoria.
+
+            SQLite era más rápido de arrancar, pero mentía: ordena los NULL al
+            revés en un ORDER BY DESC (eso escondió un bug por el que los
+            componentes sin visitas encabezaban "más vistos") y no tiene ni
+            `to_tsvector` ni `pg_trgm`, de los que depende el buscador. Un test
+            verde sobre un motor distinto del real no prueba lo que dice probar.
+
+            Host, usuario y contraseña se heredan del .env; solo cambia la base
+            de datos. Créala con:
+                docker compose exec db createdb -U layerbase layerbase_testing
+        -->
+        <env name="DB_CONNECTION" value="pgsql"/>
+        <env name="DB_DATABASE" value="layerbase_testing"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

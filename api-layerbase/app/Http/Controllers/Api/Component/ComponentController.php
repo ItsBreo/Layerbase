@@ -32,18 +32,35 @@ class ComponentController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        // `files` se carga para poder resolver la portada (preview_url) de cada
-        // tarjeta sin una query por componente.
-        $query = Component::query()
-            ->published()
-            ->with(['author', 'category', 'tags', 'files']);
-
-        $this->applyFilters($query, $request);
-        $this->applySorting($query, $request);
-
+        $term = trim((string) $request->input('q', ''));
         $perPage = min((int) $request->integer('per_page', 15), 50);
 
-        return ComponentResource::collection($query->paginate($perPage));
+        if ($term === '') {
+            $query = $this->baseQuery($request);
+            $this->applySorting($query, $request);
+
+            return ComponentResource::collection($query->paginate($perPage));
+        }
+
+        $results = $this->searchQuery($request, $term, fuzzy: false)->paginate($perPage);
+
+        /*
+         * Plan B: si la búsqueda exacta no ha encontrado NADA, se reintenta por
+         * parecido. Así "carusel" acaba encontrando "Carousel" en vez de
+         * devolver una página vacía.
+         *
+         * Se hace en cascada y no en un único `OR` a propósito. Mezclarlas en
+         * una sola query obligaría a comparar trigramas en TODAS las búsquedas,
+         * incluidas las que ya habían acertado, y metería resultados
+         * medianamente parecidos entre los que son exactos. Aquí la búsqueda
+         * difusa solo se paga cuando la buena ya ha fallado, que es justo cuando
+         * el usuario prefiere algo aproximado a un "sin resultados".
+         */
+        if ($results->total() === 0) {
+            $results = $this->searchQuery($request, $term, fuzzy: true)->paginate($perPage);
+        }
+
+        return ComponentResource::collection($results);
     }
 
     /**
@@ -164,6 +181,55 @@ class ComponentController extends Controller
 
     // --- Helpers ----------------------------------------------------------
 
+    /**
+     * Listado público sin ordenar: publicados + filtros.
+     *
+     * `files` se carga para poder resolver la portada (preview_url) de cada
+     * tarjeta sin una query por componente.
+     */
+    private function baseQuery(Request $request): Builder
+    {
+        $query = Component::query()
+            ->published()
+            ->with(['author', 'category', 'tags', 'files']);
+
+        $this->applyFilters($query, $request);
+
+        return $query;
+    }
+
+    /**
+     * Listado con búsqueda de texto aplicada.
+     *
+     * El orden en que se encadenan las dos ordenaciones decide cuál manda, y
+     * eso es lo único delicado de este método:
+     *
+     *  - Si quien busca ha elegido un orden (`sort=price_asc`), ese orden manda
+     *    y la relevancia solo desempata. Pedir "de más barato a más caro" y
+     *    recibir otra cosa sería ignorar una petición explícita.
+     *  - Si no ha elegido nada, manda la relevancia, y la fecha desempata. Sin
+     *    esto el buscador devolvería lo más reciente en vez de lo que mejor
+     *    encaja, que es el resultado que espera cualquiera al escribir algo.
+     */
+    private function searchQuery(Request $request, string $term, bool $fuzzy): Builder
+    {
+        $query = $this->baseQuery($request);
+
+        $applySearch = fn (Builder $q): Builder => $fuzzy
+            ? $q->resembling($term)
+            : $q->matching($term);
+
+        if ($request->filled('sort')) {
+            $this->applySorting($query, $request);
+            $applySearch($query);
+        } else {
+            $applySearch($query);
+            $this->applySorting($query, $request);
+        }
+
+        return $query;
+    }
+
     /** Aplica los filtros del listado público al query builder. */
     private function applyFilters(Builder $query, Request $request): void
     {
@@ -203,14 +269,9 @@ class ComponentController extends Controller
             $query->where('price', '<=', (float) $request->input('max_price'));
         }
 
-        // Búsqueda de texto en título/descripción.
-        if ($request->filled('q')) {
-            $term = '%'.str_replace(['%', '_'], ['\%', '\_'], (string) $request->input('q')).'%';
-            $query->where(function (Builder $q) use ($term): void {
-                $q->where('title', 'like', $term)
-                    ->orWhere('description', 'like', $term);
-            });
-        }
+        // La búsqueda de texto (`q`) NO se aplica aquí: necesita ordenar por
+        // relevancia y tiene un plan B por similitud, así que vive en
+        // searchQuery() y en los scopes `matching`/`resembling` del modelo.
     }
 
     /**
