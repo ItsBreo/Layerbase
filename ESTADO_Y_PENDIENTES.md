@@ -31,6 +31,8 @@
 | — | El formulario de edición nunca cargaba el código ni el README guardados | bloque 7 |
 | 3.4 (mitad) | Métricas del panel de admin | sesión A |
 | — | `component_views`: sin analítica de visitas | sesión A |
+| 3.4 | Catálogo del panel: CRUD de categorías y limpieza de etiquetas | sesión B |
+| — | `components_count` de categorías y etiquetas valía 0: nadie lo escribía | sesión B |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 

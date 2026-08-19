@@ -6,7 +6,7 @@
  * teniendo una única entrada "Admin".
  */
 import { NavLink } from 'react-router-dom'
-import { ChartLine, ShieldCheck, Users } from 'lucide-react'
+import { ChartLine, Library, ShieldCheck, Users } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useI18n } from '@/i18n/useI18n'
 import { cn } from '@/lib/utils'
@@ -26,6 +26,7 @@ export function AdminNav() {
     { to: '/admin', label: t('admin.sections.moderation'), icon: ShieldCheck, end: true },
     { to: '/admin/users', label: t('admin.sections.users'), icon: Users },
     { to: '/admin/metrics', label: t('admin.sections.metrics'), icon: ChartLine },
+    { to: '/admin/catalog', label: t('admin.sections.catalog'), icon: Library },
   ]
 
   return (

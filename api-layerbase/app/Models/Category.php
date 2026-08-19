@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -31,6 +32,37 @@ class Category extends Model
     public function components(): HasMany
     {
         return $this->hasMany(Component::class);
+    }
+
+    /**
+     * Recalcula `components_count` de las categorías indicadas.
+     *
+     * Cuenta solo los PUBLICADOS: es un número que se enseña en un catálogo
+     * público, y contar borradores prometería componentes que nadie puede ver.
+     *
+     * Se RECALCULA en vez de sumar/restar deltas. Un delta habría que ajustarlo
+     * en cada creación, borrado, restauración, cambio de categoría y cambio de
+     * estado; basta con olvidar uno para que el contador quede desviado para
+     * siempre. Recalcular es una query y siempre da el número correcto.
+     *
+     * @param  array<int, int|null>  $ids
+     */
+    public static function recount(array $ids): void
+    {
+        $ids = array_values(array_unique(array_filter($ids)));
+
+        if ($ids === []) {
+            return;
+        }
+
+        static::query()->whereIn('id', $ids)->update([
+            'components_count' => DB::raw(
+                '(select count(*) from components
+                  where components.category_id = categories.id
+                    and components.status = \'published\'
+                    and components.deleted_at is null)'
+            ),
+        ]);
     }
 
     public function getRouteKeyName(): string

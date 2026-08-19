@@ -253,6 +253,14 @@ class ComponentController extends Controller
                 )->id;
             });
 
+        // Los ids ANTERIORES hacen falta para recalcular también las etiquetas
+        // que el componente deja de usar: se quedan con un componente menos.
+        $previous = $component->tags()->pluck('tags.id')->all();
+
         $component->tags()->sync($ids);
+
+        // `sync()` toca la tabla pivote directamente y no dispara eventos del
+        // modelo, así que el observer no se entera: hay que recalcular aquí.
+        Tag::recount([...$previous, ...$ids->all()]);
     }
 }

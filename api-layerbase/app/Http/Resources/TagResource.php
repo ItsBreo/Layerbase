@@ -20,6 +20,8 @@ class TagResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'slug' => $this->slug,
+            'components_count' => $this->components_count,
+            'total_components' => $this->whenCounted('components', $this->total_components),
         ];
     }
 }

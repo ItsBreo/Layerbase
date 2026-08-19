@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\CatalogController;
 use App\Http\Controllers\Api\Admin\MetricsController;
 use App\Http\Controllers\Api\Admin\ModerationController;
 use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
@@ -89,6 +90,20 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
         // Resumen de la plataforma (solo lectura).
         Route::get('metrics', [MetricsController::class, 'index'])->name('admin.metrics');
+
+        // --- Catálogo ---
+        // Las categorías son estructura y las crea un admin; las etiquetas las
+        // crean los autores al escribirlas, así que aquí solo se revisan y se
+        // limpian las que se quedaron sin uso.
+        Route::get('catalog/categories', [CatalogController::class, 'categories'])->name('admin.catalog.categories');
+        Route::post('catalog/categories', [CatalogController::class, 'storeCategory'])->name('admin.catalog.categories.store');
+        Route::patch('catalog/categories/{category}', [CatalogController::class, 'updateCategory'])->name('admin.catalog.categories.update');
+        Route::delete('catalog/categories/{category}', [CatalogController::class, 'destroyCategory'])->name('admin.catalog.categories.destroy');
+
+        // La purga masiva va ANTES del comodín para que no la capture como slug.
+        Route::delete('catalog/tags', [CatalogController::class, 'purgeOrphanTags'])->name('admin.catalog.tags.purge');
+        Route::get('catalog/tags', [CatalogController::class, 'tags'])->name('admin.catalog.tags');
+        Route::delete('catalog/tags/{tag}', [CatalogController::class, 'destroyTag'])->name('admin.catalog.tags.destroy');
 
         // --- Moderación ---
         // Cola de revisión (lectura) + las dos transiciones que solo un admin

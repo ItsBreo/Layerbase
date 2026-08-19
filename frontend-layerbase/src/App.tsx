@@ -26,6 +26,7 @@ import Dashboard from '@/pages/Dashboard'
 import AdminPanel from '@/pages/AdminPanel'
 import AdminUsers from '@/pages/AdminUsers'
 import AdminMetrics from '@/pages/AdminMetrics'
+import AdminCatalog from '@/pages/AdminCatalog'
 import NotFound from '@/pages/NotFound'
 import Explore from '@/studio/Explore'
 import ComponentDetail from '@/studio/ComponentDetail'
@@ -126,6 +127,7 @@ export default function App() {
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/metrics" element={<AdminMetrics />} />
+        <Route path="/admin/catalog" element={<AdminCatalog />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

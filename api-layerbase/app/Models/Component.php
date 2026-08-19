@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Enums\ComponentFileType;
 use App\Enums\ComponentStatus;
 use App\Enums\Stack;
+use App\Observers\ComponentObserver;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +31,7 @@ use Illuminate\Support\Str;
  * Ver documents/ComponentHub_Modelo_Datos.md (§3).
  */
 #[Fillable(['category_id', 'title', 'description', 'stack', 'price'])]
+#[ObservedBy(ComponentObserver::class)]
 class Component extends Model
 {
     use SoftDeletes;

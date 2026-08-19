@@ -22,7 +22,11 @@ class CategoryResource extends JsonResource
             'slug' => $this->slug,
             'stack' => $this->stack,
             'description' => $this->description,
+            // Publicados (columna desnormalizada, mantenida por ComponentObserver).
             'components_count' => $this->components_count,
+            // Todos los estados. Solo lo pide el panel de admin, para saber si
+            // la categoría se puede borrar.
+            'total_components' => $this->whenCounted('components', $this->total_components),
         ];
     }
 }
