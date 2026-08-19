@@ -7,6 +7,7 @@ use App\Http\Requests\Review\StoreReviewRequest;
 use App\Http\Resources\ReviewResource;
 use App\Models\Component;
 use App\Models\Review;
+use App\Notifications\ReviewReceived;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -61,6 +62,10 @@ class ReviewController extends Controller
         $review->component_id = $component->id;
         $review->user_id = $request->user()->id;
         $review->save();
+
+        // Al autor del componente, no al de la reseña. `?->` porque la relación
+        // es opcional en el tipo, aunque en la práctica siempre haya autor.
+        $component->author?->notify(new ReviewReceived($review->load('component', 'author')));
 
         return response()->json([
             'message' => 'Valoración publicada.',

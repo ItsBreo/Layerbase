@@ -21,6 +21,7 @@ import { useI18n } from '@/i18n/useI18n'
 import { BrandWordmark } from '@/components/Brand'
 import { LanguageSwitcher } from '@/components/LanguageSwitcher'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { NotificationBell } from '@/notifications/NotificationBell'
 
 export function TopNav() {
   const { isAuthenticated, user, logout } = useAuth()
@@ -51,6 +52,9 @@ export function TopNav() {
           {/* Sesión */}
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
+              {/* Va con la sesión, no con los ajustes: sin cuenta no hay nada
+                  que notificar. */}
+              <NotificationBell />
               <UserChip name={user?.name ?? ''} avatarUrl={user?.avatar_url} />
               {/* Icono, no texto: evita que la barra cambie de ancho entre ES
                   ("Cerrar sesión") y EN ("Sign out"). El nombre accesible va en

@@ -8,8 +8,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Component\RejectComponentRequest;
 use App\Http\Resources\ComponentResource;
 use App\Models\Component;
+use App\Models\User;
+use App\Notifications\ComponentApproved;
+use App\Notifications\ComponentRejected;
+use App\Notifications\ComponentSubmitted;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -50,8 +55,10 @@ class ComponentStateController extends Controller
 
         $component->submitForReview();
 
-        // TODO(notificaciones): notificar a los admin de que hay un componente
-        // pendiente de revisar (módulo de notificaciones, semana posterior).
+        // Aviso a TODOS los admin: sin esto la cola solo se descubre entrando a
+        // mirarla, y un autor podía esperar días sin que nadie supiera que
+        // había enviado algo.
+        Notification::send(User::admins()->get(), new ComponentSubmitted($component));
 
         return $this->respond($component, 'Componente enviado a revisión.');
     }
@@ -72,8 +79,7 @@ class ComponentStateController extends Controller
 
         $component->approve();
 
-        // TODO(notificaciones): avisar al autor de que su componente está
-        // publicado (módulo de notificaciones, semana posterior).
+        $component->author?->notify(new ComponentApproved($component));
 
         return $this->respond($component, 'Componente aprobado y publicado.');
     }
@@ -90,7 +96,10 @@ class ComponentStateController extends Controller
 
         $component->reject($request->validated('reason'));
 
-        // TODO(notificaciones): avisar al autor del rechazo y del motivo.
+        // Se notifica DESPUÉS de `reject()`, que es quien escribe el motivo: la
+        // notificación se lo lleva dentro para que el autor no tenga que entrar
+        // a la ficha solo para leerlo.
+        $component->author?->notify(new ComponentRejected($component));
 
         return $this->respond($component, 'Componente rechazado.');
     }

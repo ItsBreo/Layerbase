@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\Component\ComponentController;
 use App\Http\Controllers\Api\Component\ComponentFileController;
 use App\Http\Controllers\Api\Component\ComponentStateController;
 use App\Http\Controllers\Api\Component\TagController;
+use App\Http\Controllers\Api\Notification\NotificationController;
 use App\Http\Controllers\Api\Profile\ProfileController;
 use App\Http\Controllers\Api\Review\ReviewController;
 use App\Http\Controllers\Api\User\PublicProfileController;
@@ -131,6 +132,19 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::middleware('role:author')->prefix('author')->group(function () {
         Route::get('ping', fn () => response()->json(['message' => 'author ok']))->name('author.ping');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Notificaciones in-app
+|--------------------------------------------------------------------------
+| Sin parámetro de usuario en la ruta: siempre las del autenticado.
+*/
+Route::middleware(['auth:sanctum', 'active'])->prefix('notifications')->group(function () {
+    Route::get('/', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread');
+    Route::post('read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('{id}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
 });
 
 /*

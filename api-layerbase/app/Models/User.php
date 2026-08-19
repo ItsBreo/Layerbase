@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -103,6 +104,17 @@ class User extends Authenticatable implements MustVerifyEmail
     public function hasPassword(): bool
     {
         return $this->password !== null;
+    }
+
+    /**
+     * Administradores ACTIVOS. Los suspendidos no cuentan: no pueden entrar, así
+     * que notificarles sería mandar avisos a un buzón que nadie abre.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeAdmins($query)
+    {
+        return $query->where('role', UserRole::Admin)->where('banned', false);
     }
 
     /**

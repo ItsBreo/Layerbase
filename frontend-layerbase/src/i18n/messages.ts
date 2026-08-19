@@ -405,6 +405,18 @@ export const messages = {
         content: {},
       },
     },
+    notifications: {
+      title: 'Notificaciones',
+      empty: 'No tienes notificaciones.',
+      loading: 'Cargando…',
+      markAll: 'Marcar todas como leídas',
+      types: {
+        component_approved: '«{title}» ha sido aprobado y ya está publicado.',
+        component_rejected: '«{title}» ha sido rechazado.',
+        component_submitted: '{name} ha enviado «{title}» a revisión.',
+        review_received: '{name} ha valorado «{title}» con {rating} estrellas.',
+      },
+    },
     reviews: {
       title: 'Valoraciones',
       none: 'Sin valoraciones todavía',
@@ -1078,6 +1090,18 @@ export const messages = {
           manage: 'How to manage or disable them',
         },
         content: {},
+      },
+    },
+    notifications: {
+      title: 'Notifications',
+      empty: 'You have no notifications.',
+      loading: 'Loading…',
+      markAll: 'Mark all as read',
+      types: {
+        component_approved: '“{title}” was approved and is now published.',
+        component_rejected: '“{title}” was rejected.',
+        component_submitted: '{name} submitted “{title}” for review.',
+        review_received: '{name} rated “{title}” {rating} stars.',
       },
     },
     reviews: {
