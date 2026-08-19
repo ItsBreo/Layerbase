@@ -54,19 +54,26 @@ class OAuthSecurityTest extends TestCase
         $this->assertSame(0, $attacker->tokens()->count());
     }
 
-    public function test_oauth_does_link_to_a_verified_account_with_the_same_email(): void
+    public function test_oauth_never_links_by_email_not_even_to_a_verified_account(): void
     {
-        // Cuenta verificada: el email SÍ prueba identidad, así que vincular es
-        // correcto y es lo que espera quien ya tenía cuenta.
+        /*
+         * Antes esto SÍ vinculaba, condicionado a que la cuenta local estuviera
+         * verificada. Dejó de valer cuando el email pasó a verificarse solo con
+         * entrar: si cualquiera puede quedar verificado, "estar verificado" ya
+         * no prueba que el correo sea suyo, y la condición no protegía nada.
+         *
+         * Ahora la única vía de vínculo es el identificador de proveedor, que
+         * lo emite Google/GitHub y no se puede inventar.
+         */
         $user = User::factory()->create(['email' => 'ada@example.com']);
 
         $this->mockSocialiteUser('github', id: '123', email: 'ada@example.com');
 
         $response = $this->get($this->callbackUrl('github'));
 
-        $response->assertRedirect();
-        $this->assertStringContainsString('/auth/callback#token=', $response->headers->get('Location'));
-        $this->assertSame('123', $user->fresh()->github_oauth_id);
+        $this->assertStringContainsString('error=oauth_email_taken', $response->headers->get('Location'));
+        $this->assertNull($user->fresh()->github_oauth_id);
+        $this->assertSame(0, $user->tokens()->count());
     }
 
     public function test_an_already_linked_account_logs_in_regardless_of_verification(): void

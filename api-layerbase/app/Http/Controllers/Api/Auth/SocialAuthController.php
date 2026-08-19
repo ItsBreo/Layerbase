@@ -73,9 +73,10 @@ class SocialAuthController extends Controller
 
         $user = $this->upsertUser($provider, $socialUser);
 
-        // Sin cuenta vinculable: el email ya pertenece a una cuenta local que
-        // nadie ha verificado, así que enlazar sería regalarle esa identidad a
-        // quien la registró. Ver `upsertUser()`.
+        // Sin cuenta vinculable: el correo ya pertenece a otra cuenta y esta
+        // identidad social no está enganchada a ella. Vincular por email sería
+        // regalar la identidad a quien registrara ese correo primero. Ver
+        // `upsertUser()`.
         if ($user === null) {
             return redirect()->away($this->frontendUrl('/login?error=oauth_email_taken'));
         }
@@ -92,20 +93,30 @@ class SocialAuthController extends Controller
     /**
      * Vincula la identidad social a una cuenta local.
      *
-     * Orden: primero por oauth id (vínculo ya establecido, siempre seguro),
-     * después por email y, si no hay nada, se crea una cuenta.
+     * **NUNCA se vincula por email.** Solo por identificador de proveedor: o
+     * esta identidad de Google/GitHub ya estaba enganchada a una cuenta, o se
+     * crea una nueva. Si el correo ya lo tiene otra cuenta, se rechaza.
      *
-     * EL ENLACE POR EMAIL SOLO VALE SI LA CUENTA LOCAL ESTÁ VERIFICADA. Antes
-     * no se comprobaba, y eso abría una apropiación de cuenta: como el registro
-     * no verificaba nada, bastaba con registrarse usando el correo de otra
-     * persona y esperar. Cuando esa persona entraba con Google, la búsqueda por
-     * email encontraba la cuenta del atacante y le enganchaba su identidad
-     * social; a partir de ahí la víctima trabajaba sobre una cuenta cuya
-     * contraseña conocía el atacante.
+     * Esa regla es lo que sostiene que el email se dé por verificado solo con
+     * entrar. Antes el enlace por email sí existía y estaba condicionado a que
+     * la cuenta local estuviera verificada, porque si no había una apropiación
+     * de cuenta: registrarse con el correo de otra persona y esperar a que esa
+     * persona entrara con Google, momento en el que su identidad social
+     * quedaba enganchada a la cuenta del atacante.
+     *
+     * Con la verificación automática, "estar verificado" ya no demuestra que
+     * el correo sea tuyo, así que esa condición dejaría de proteger nada. La
+     * única defensa que sigue en pie es no vincular por email en absoluto: el
+     * identificador de proveedor sí lo emite Google/GitHub y no se puede
+     * inventar.
+     *
+     * El coste, asumido: quien se registró con contraseña no puede entrar
+     * después con Google usando ese mismo correo. Hará falta vincular cuentas
+     * desde el perfil, que hoy no existe.
      *
      * `users.email` es UNIQUE, así que "crear otra cuenta con el mismo correo"
-     * no es una salida posible: si el email está cogido por una cuenta sin
-     * verificar, lo único seguro es no vincular y devolver null.
+     * tampoco es una salida: si el email está cogido, lo único posible es no
+     * vincular y devolver null.
      */
     private function upsertUser(string $provider, SocialiteUser $socialUser): ?User
     {
@@ -115,14 +126,10 @@ class SocialAuthController extends Controller
 
         $user = User::where($oauthColumn, $providerId)->first();
 
-        if ($user === null && $email !== '') {
-            $byEmail = User::where('email', $email)->first();
-
-            if ($byEmail !== null && ! $byEmail->hasVerifiedEmail()) {
-                return null;
-            }
-
-            $user = $byEmail;
+        // El correo ya es de otra cuenta y esta identidad social no está
+        // enganchada a ella: no se vincula, se rechaza.
+        if ($user === null && $email !== '' && User::where('email', $email)->exists()) {
+            return null;
         }
 
         if ($user === null) {

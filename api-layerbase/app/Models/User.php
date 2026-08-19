@@ -107,6 +107,31 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Da el email por verificado al entrar, si no lo estaba ya.
+     *
+     * Es una decisión de producto tomada a conciencia: mientras no haya un
+     * dominio propio desde el que mandar correo, exigir verificación real
+     * dejaría la plataforma inutilizable (publicar la exige), así que la
+     * verificación por enlace queda desactivada de hecho.
+     *
+     * LO QUE ESTO CUESTA: `email_verified_at` deja de demostrar que el correo
+     * sea de quien lo registró. Solo dice "esta cuenta se ha usado". Nada que
+     * dependa de esa garantía puede apoyarse en este campo — y en particular
+     * `SocialAuthController::upsertUser()` ya NO vincula identidades de
+     * Google/GitHub por email, que era lo único que lo hacía.
+     *
+     * La maquinaria de verificación (endpoints, notificación, el requisito en
+     * `submit`) se deja en su sitio: volver a activarla es quitar estas
+     * llamadas, no reescribir el flujo.
+     */
+    public function markEmailAsVerifiedOnSignIn(): void
+    {
+        if (! $this->hasVerifiedEmail()) {
+            $this->markEmailAsVerified();
+        }
+    }
+
+    /**
      * Administradores ACTIVOS. Los suspendidos no cuentan: no pueden entrar, así
      * que notificarles sería mandar avisos a un buzón que nadie abre.
      *

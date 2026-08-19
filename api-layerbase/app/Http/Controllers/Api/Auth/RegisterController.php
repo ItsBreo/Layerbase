@@ -21,7 +21,19 @@ class RegisterController extends Controller
         // seguro ('user') y no es mass-assignable.
         $user = User::create($request->safe()->only(['name', 'email', 'password']));
 
-        // Permite enganchar verificación de email más adelante sin bloquear el MVP.
+        /*
+         * Verificar ANTES de disparar el evento, y ese orden es lo único
+         * delicado de aquí: el listener de Laravel que manda el correo de
+         * verificación comprueba `! hasVerifiedEmail()`, así que con la cuenta
+         * ya verificada no envía nada. Registrarse deja la cuenta lista sin
+         * pasar por el buzón.
+         *
+         * El evento se mantiene: si algún día se reactiva la verificación de
+         * verdad, basta con quitar la línea de arriba y el correo vuelve a
+         * salir solo. Ver User::markEmailAsVerifiedOnSignIn().
+         */
+        $user->markEmailAsVerifiedOnSignIn();
+
         event(new Registered($user));
 
         $token = $user->createToken($this->deviceName($request->input('device_name')))->plainTextToken;

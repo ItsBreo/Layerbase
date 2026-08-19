@@ -531,8 +531,12 @@ export const messages = {
         errorProvider: 'No se pudo completar el inicio con el proveedor.',
         errorBanned: 'Tu cuenta está suspendida.',
         errorState: 'La petición ha caducado o no es válida. Inténtalo de nuevo.',
+        // El mensaje anterior prometía vincular el proveedor desde el perfil.
+        // Eso ya no es posible: OAuth solo reconoce cuentas por identificador de
+        // proveedor, nunca por email. Prometer algo que no existe es peor que no
+        // ofrecer salida.
         errorEmailTaken:
-          'Ya hay una cuenta con ese email sin verificar. Entra con tu contraseña y vincula el proveedor desde tu perfil.',
+          'Ya hay una cuenta registrada con ese email. Entra con tu contraseña.',
         errorToken: 'Falta el token de autenticación.',
         errorSession: 'No se pudo validar la sesión.',
       },
@@ -1226,7 +1230,7 @@ export const messages = {
         errorBanned: 'Your account is suspended.',
         errorState: 'The request expired or is not valid. Please try again.',
         errorEmailTaken:
-          'There is already an unverified account with that email. Sign in with your password and link the provider from your profile.',
+          'An account with that email already exists. Sign in with your password instead.',
         errorToken: 'Missing authentication token.',
         errorSession: 'Couldn’t validate the session.',
       },

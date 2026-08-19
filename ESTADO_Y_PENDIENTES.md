@@ -44,6 +44,30 @@
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 
+### Cambio deliberado en 1.1: el email se verifica al entrar
+
+*2026-08-19.* Sin dominio propio no hay forma de mandar correo a direcciones
+ajenas, y como publicar exige email verificado, la plataforma quedaba
+inutilizable en preproducción. Decisión: **el email se da por verificado al
+registrarse y al iniciar sesión**.
+
+Eso **anula** una de las dos mitades del arreglo de 1.1. `email_verified_at` ya
+no demuestra que el correo sea de quien lo registró — solo dice que la cuenta se
+ha usado. Así que la otra mitad tuvo que endurecerse para compensar:
+
+- **OAuth ya NO vincula identidades por email, en ningún caso.** Antes lo hacía
+  si la cuenta local estaba verificada; con verificación automática esa condición
+  no protegía nada. Ahora la única vía es el identificador de proveedor, que lo
+  emite Google/GitHub y no se puede falsificar.
+- **Coste asumido:** quien se registró con contraseña no puede entrar después con
+  Google usando ese mismo correo. Hace falta vincular cuentas desde el perfil,
+  que no existe. El mensaje de error ya no lo promete.
+- La maquinaria de verificación por enlace **sigue montada y con tests**.
+  Reactivarla es quitar dos llamadas a `User::markEmailAsVerifiedOnSignIn()`.
+
+Frontera en `tests/Feature/Auth/EmailVerificationTest.php` y
+`tests/Feature/Auth/OAuthSecurityTest.php`.
+
 ### Cómo quedó 1.4
 
 La regla es **"nadie revisa su propio trabajo mientras haya otra persona que

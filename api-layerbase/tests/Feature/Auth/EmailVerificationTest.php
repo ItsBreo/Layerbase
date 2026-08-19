@@ -15,16 +15,25 @@ use Tests\TestCase;
 /**
  * Verificación de la dirección de email.
  *
- * No es una comodidad: es la mitad del arreglo de una vía de apropiación de
- * cuenta (la otra mitad está en `OAuthSecurityTest`). Mientras cualquiera
- * pudiera registrarse con el correo de otro sin demostrar nada, ese correo no
- * servía como identidad y OAuth no podía fiarse de él para vincular cuentas.
+ * **El email se da por verificado con solo entrar.** Es una decisión tomada a
+ * conciencia: sin dominio propio desde el que mandar correo, exigir
+ * verificación real dejaría la plataforma inutilizable, porque publicar la
+ * exige.
+ *
+ * A cambio, `email_verified_at` ya NO demuestra que el correo sea de quien lo
+ * registró — solo que la cuenta se ha usado. La defensa contra la apropiación
+ * de cuenta se sostiene entera en la otra mitad, en `OAuthSecurityTest`: OAuth
+ * no vincula identidades por email en ningún caso.
+ *
+ * La maquinaria de verificación por enlace sigue montada y probada aquí. No es
+ * código muerto por descuido: es lo que permite reactivarla quitando dos
+ * llamadas el día que haya un dominio.
  */
 class EmailVerificationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registering_sends_a_verification_email(): void
+    public function test_registering_leaves_the_account_verified_and_sends_nothing(): void
     {
         Notification::fake();
 
@@ -37,8 +46,40 @@ class EmailVerificationTest extends TestCase
 
         $user = User::where('email', 'ada@example.com')->firstOrFail();
 
-        $this->assertNull($user->email_verified_at);
-        Notification::assertSentTo($user, VerifyEmail::class);
+        $this->assertNotNull($user->email_verified_at);
+
+        // Y no se manda correo: el orden importa, porque el listener de Laravel
+        // solo envía si la cuenta NO está verificada. Verificar antes de
+        // disparar el evento es lo que lo silencia, sin desmontar nada.
+        Notification::assertNothingSent();
+    }
+
+    public function test_signing_in_verifies_an_account_that_was_not(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create(['email' => 'ada@example.com']);
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'ada@example.com',
+            'password' => 'password',
+        ])->assertOk();
+
+        $this->assertNotNull($user->fresh()->email_verified_at);
+    }
+
+    public function test_a_failed_sign_in_does_not_verify_anything(): void
+    {
+        $user = User::factory()->unverified()->create(['email' => 'ada@example.com']);
+
+        // Si bastara con intentarlo, cualquiera verificaría la cuenta de otro
+        // con solo teclear su correo.
+        $this->postJson('/api/auth/login', [
+            'email' => 'ada@example.com',
+            'password' => 'la-que-no-es',
+        ])->assertStatus(422);
+
+        $this->assertNull($user->fresh()->email_verified_at);
     }
 
     public function test_a_signed_link_verifies_the_account(): void

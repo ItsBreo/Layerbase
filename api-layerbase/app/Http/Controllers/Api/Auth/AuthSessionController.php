@@ -42,6 +42,10 @@ class AuthSessionController extends Controller
             ])->status(403);
         }
 
+        // Entrar da el email por verificado. Ver el porqué y lo que cuesta en
+        // User::markEmailAsVerifiedOnSignIn().
+        $user->markEmailAsVerifiedOnSignIn();
+
         $token = $user->createToken($this->deviceName($request->input('device_name')))->plainTextToken;
 
         return response()->json([
