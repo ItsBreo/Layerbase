@@ -311,8 +311,20 @@ nota explica por qué existía el hueco.*
 
 ## 6. Lo que queda, repartido por sesiones
 
-Ordenado de menos a más trabajo. Cada sesión es una unidad cerrada: se puede
-parar al final de cualquiera sin dejar nada a medias.
+Cada sesión es una unidad cerrada: se puede parar al final de cualquiera sin
+dejar nada a medias.
+
+Las sesiones A-G están hechas y se ordenaron de menos a más trabajo. **El orden
+de lo que queda ya no es ese, es el acordado el 2026-08-19:**
+
+| Orden | Sesión | Estado |
+| --- | --- | --- |
+| 1 | **I — Despliegue de preproducción** | 🔵 siguiente |
+| 2 | **J — Paso a producción** | 🔴 después |
+| — | Vincular cuentas desde el perfil | 🔴 sin fecha, no bloquea |
+| 3 | **K+ — Compras / Stripe** | ⏸ **últimas fases, por decisión propia** |
+| 4 | **Pantalla de preferencias** | ⏸ **últimas fases, por decisión propia** |
+| 5 | **Suscripciones** | ⏸ al final de todo |
 
 ---
 
@@ -501,29 +513,18 @@ y `TagController`. El test que existía pasaba porque el término casaba con el
 
 ---
 
-### Sesión H+ — Compras / Stripe
-
-*Varias sesiones. El módulo grande.*
-
-Checkout, webhooks, tabla `purchases`, y Connect Express para pagar a los
-autores. Arrastra consigo:
-
-- **2.4** (`hasPurchases()` devuelve siempre `false`, así que hoy un componente
-  comprado se borraría en vez de despublicarse).
-- `userCanAccessSource()`, que tiene el mismo `TODO` esperando la tabla.
-- Decidir la **comisión**: la hoja de ruta dice 10% / 5% y el modelo de datos
-  dice 15%. Sigue sin resolverse.
-
----
-
-### Sesión I — Despliegue
+### Sesión I — Despliegue de PREPRODUCCIÓN
 
 *Varias sesiones. Auditado el 2026-08-19 sobre el código real.*
 
-Objetivo: **preproducción** en Vercel/Cloudflare (frontend) + Cloud Run
-(backend), gratis, hasta que haya algo real. Proyecto de GCP ya creado
-("Layerbase beta"); `gcloud` instalado en local (SDK 581), **sin autenticar
-todavía**.
+Objetivo: que esto **esté en una URL y se pueda entrar**, gratis, con datos de
+prueba. Frontend en Cloudflare Pages o Vercel, backend en Cloud Run. Proyecto de
+GCP ya creado ("Layerbase beta"); `gcloud` instalado en local (SDK 581), **sin
+autenticar todavía**.
+
+Lo que **no** hace falta aquí: dominio propio, correo transaccional (la
+verificación de email es automática desde el 2026-08-19), texto legal redactado
+—mientras sea beta cerrada y no se cobre—, ni Stripe.
 
 #### Bloqueantes de código — sin esto no funciona desplegado
 
@@ -574,15 +575,36 @@ migración falla al arrancar. Confirmarlo **antes** de elegir.
 
 #### Depende de terceros, no del código
 
-- **Dominio propio** (~10 €/año). Es lo que desbloquea el correo transactional:
-  todos los proveedores exigen verificar un dominio con DNS para enviar a
-  direcciones ajenas. Ya no bloquea el registro (ver el cambio de 1.1), pero sí
-  cualquier correo futuro.
 - **Facturación vinculada al proyecto de GCP.** Un proyecto nuevo **no la
   hereda**. Cloud Run la exige aunque solo se use el free tier.
 - **Habilitar Cloud Run Admin API y Artifact Registry API.**
-- **Texto legal.** Las cuatro páginas están montadas y el propio aviso dice "no
-  debe publicarse en este estado".
+- Crear las cuentas de la base de datos y del almacenamiento (verificación por
+  email). Las claves las mete el dueño en su `.env`; no pasan por el chat.
+
+---
+
+### Sesión J — Paso a PRODUCCIÓN
+
+*Después de preproducción. Aquí es donde entra todo lo que se aplazó por no
+tener dominio ni cobrar dinero.*
+
+Preproducción demuestra que el despliegue funciona. Producción es lo que hace
+falta para que entre gente que no eres tú y, llegado el caso, dinero.
+
+- **Dominio propio** (~10 €/año). Desbloquea las dos cosas de abajo.
+- **Correo transaccional real**: todos los proveedores exigen verificar un
+  dominio con DNS para enviar a direcciones ajenas. Con eso montado, decidir si
+  **se reactiva la verificación de email** quitando las dos llamadas a
+  `User::markEmailAsVerifiedOnSignIn()` (ver el cambio de 1.1 en la sección 0).
+- **Texto legal redactado.** Las cuatro páginas están montadas y el propio aviso
+  dice "no debe publicarse en este estado". No depende del código.
+- **`composer audit`**: 19 avisos, uno alto. `composer update` de los cinco
+  paquetes con la suite delante.
+- **Hosting del frontend**: el plan Hobby de Vercel es **solo para proyectos no
+  comerciales**. En cuanto se cobre de verdad hay que estar en Cloudflare Pages o
+  en un plan de pago.
+- **Copias de seguridad y monitorización.** Hoy no hay ninguna de las dos.
+- Repasar `APP_DEBUG=false`, límites de subida y throttling con tráfico real.
 
 ---
 
@@ -599,7 +621,30 @@ correo, así que es seguro. No bloquea el despliegue.
 
 ---
 
-### Pantalla de preferencias — al final
+### Sesión K+ — Compras / Stripe — **últimas fases**
+
+*Varias sesiones. El módulo grande.*
+
+> **Aplazado a las últimas fases del proyecto por decisión propia (2026-08-19).**
+> No se empieza hasta entonces, aunque quede hueco antes.
+
+Checkout, webhooks, tabla `purchases`, y Connect Express para pagar a los
+autores. Arrastra consigo:
+
+- **2.4** (`hasPurchases()` devuelve siempre `false`, así que hoy un componente
+  comprado se borraría en vez de despublicarse).
+- `userCanAccessSource()`, que tiene el mismo `TODO` esperando la tabla.
+- Decidir la **comisión**: la hoja de ruta dice 10% / 5% y el modelo de datos
+  dice 15%. Sigue sin resolverse.
+
+---
+
+---
+
+### Pantalla de preferencias — **últimas fases**
+
+> **Aplazada a las últimas fases del proyecto por decisión propia (2026-08-19)**,
+> junto con Compras/Stripe.
 
 Idioma y tema se guardan hoy en `localStorage` (`useI18n`, `useTheme`), así que no
 acompañan al usuario entre dispositivos y **el backend no los conoce**. Eso último ya se
