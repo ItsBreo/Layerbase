@@ -33,6 +33,8 @@
 | — | `component_views`: sin analítica de visitas | sesión A |
 | 3.4 | Catálogo del panel: CRUD de categorías y limpieza de etiquetas | sesión B |
 | — | `components_count` de categorías y etiquetas valía 0: nadie lo escribía | sesión B |
+| — | Reviews: no existían (tabla, endpoints, moderación y UI) | sesión C |
+| — | `rating_avg` y `rating_count` no los escribía nadie | sesión C |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 
