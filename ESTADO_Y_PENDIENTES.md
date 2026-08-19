@@ -399,6 +399,24 @@ autores. Arrastra consigo:
 
 ---
 
+### Pantalla de preferencias — al final
+
+Idioma y tema se guardan hoy en `localStorage` (`useI18n`, `useTheme`), así que no
+acompañan al usuario entre dispositivos y **el backend no los conoce**. Eso último ya se
+nota: los correos salen en inglés porque el servidor no sabe en qué idioma navega quien los
+recibe, y no puede saberlo — un correo se envía en diferido, cuando ya no hay petición de la
+que deducirlo.
+
+Junta tres cosas que hoy están sueltas:
+
+- Columna `locale` (y `theme`) en `users`, para que la preferencia viaje con la cuenta.
+- Pantalla de preferencias donde cambiarlas.
+- Correos y notificaciones en el idioma del usuario. Hoy las plantillas son las de Laravel
+  por defecto, en inglés, con `APP_LOCALE=en` y sin carpeta `lang/`.
+
+Aplazado a propósito hasta el final: no bloquea nada, pero conviene hacerlo **antes** de
+escribir muchas plantillas de correo, o habrá que traducirlas todas después.
+
 ### Sin fecha
 
 - **Captura automática de portada** (job con Chromium headless): hoy, sin imagen,
