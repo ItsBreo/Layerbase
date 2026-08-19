@@ -56,11 +56,24 @@ class ComponentController extends Controller
          * difusa solo se paga cuando la buena ya ha fallado, que es justo cuando
          * el usuario prefiere algo aproximado a un "sin resultados".
          */
-        if ($results->total() === 0) {
+        $fuzzy = $results->total() === 0;
+
+        if ($fuzzy) {
             $results = $this->searchQuery($request, $term, fuzzy: true)->paginate($perPage);
         }
 
-        return ComponentResource::collection($results);
+        /*
+         * Se dice por qué vía vinieron los resultados. Sin esto, quien busca
+         * "carusel" recibe componentes que no contienen lo que ha escrito y no
+         * hay forma de saber si el buscador ha entendido mal o si le está
+         * ofreciendo lo más parecido. El frontend lo usa para avisar.
+         */
+        return ComponentResource::collection($results)->additional([
+            'search' => [
+                'term' => $term,
+                'fuzzy' => $fuzzy && $results->total() > 0,
+            ],
+        ]);
     }
 
     /**

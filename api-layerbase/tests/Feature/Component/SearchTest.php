@@ -129,6 +129,36 @@ class SearchTest extends TestCase
             ->assertJsonPath('data.0.title', 'Modal de confirmación');
     }
 
+    public function test_the_response_says_when_the_results_are_only_similar(): void
+    {
+        $this->makeComponent('Minimal Carousel', 'Un carrusel sobrio.');
+
+        // Quien busca "carusel" recibe algo que NO contiene lo que escribió; sin
+        // este aviso no puede distinguir "me está corrigiendo" de "ha entendido
+        // cualquier cosa".
+        $this->search('carusel')
+            ->assertOk()
+            ->assertJsonPath('search.fuzzy', true)
+            ->assertJsonPath('search.term', 'carusel');
+
+        // Cuando acierta de verdad no hay nada que avisar.
+        $this->search('carousel')
+            ->assertOk()
+            ->assertJsonPath('search.fuzzy', false);
+    }
+
+    public function test_an_empty_result_is_not_announced_as_similar(): void
+    {
+        $this->makeComponent('Carrusel infinito', 'Pasa fotos solo.');
+
+        // El plan B se ejecutó y tampoco encontró nada: "no hay resultados" no
+        // es "esto es lo más parecido".
+        $this->search('zzzqqqxxx')
+            ->assertOk()
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('search.fuzzy', false);
+    }
+
     public function test_something_that_resembles_nothing_returns_empty(): void
     {
         $this->makeComponent('Carrusel infinito', 'Pasa fotos solo.');

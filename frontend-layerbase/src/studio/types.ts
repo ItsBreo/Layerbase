@@ -126,6 +126,18 @@ export interface Paginated<T> {
     prev: string | null
     next: string | null
   }
+  /**
+   * Solo en el listado público y solo cuando se ha buscado algo.
+   *
+   * `fuzzy` es true cuando la búsqueda exacta no encontró nada y los resultados
+   * vienen del plan B por parecido. Sin este dato, quien busca "carusel" recibe
+   * componentes que no contienen lo que escribió y no puede distinguir una
+   * corrección de un fallo del buscador.
+   */
+  search?: {
+    term: string
+    fuzzy: boolean
+  }
 }
 
 /** Respuesta de descarga: URL firmada temporal. */

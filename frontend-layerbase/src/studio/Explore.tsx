@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Loader2, Search } from 'lucide-react'
+import { Info, Loader2, Search } from 'lucide-react'
 import { AppShell } from '@/components/AppShell'
 import { AccentedTitle } from '@/components/ui/AccentedTitle'
 import { Select } from '@/components/ui/Field'
@@ -56,6 +56,19 @@ export default function Explore() {
 
   const items = useMemo(() => data?.pages.flatMap((page) => page.data) ?? [], [data])
   const total = data?.pages[0]?.meta.total ?? 0
+
+  /*
+   * Cuando la búsqueda exacta no encuentra nada, el backend reintenta por
+   * parecido y lo dice en `search.fuzzy`. Sin avisarlo, buscar "carusel"
+   * devolvería componentes que no contienen esa palabra y parecería que el
+   * buscador no entiende lo que se le pide.
+   *
+   * El término sale de la RESPUESTA y no del input: mientras llega la petición
+   * el usuario puede haber seguido escribiendo, y el aviso tiene que hablar de
+   * lo que se buscó de verdad.
+   */
+  const searchMeta = data?.pages[0]?.search
+  const didYouMean = searchMeta?.fuzzy ? searchMeta.term : null
 
   // Centinela de scroll infinito.
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -139,6 +152,12 @@ export default function Explore() {
             </div>
           ) : (
             <>
+              {didYouMean && (
+                <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-navy-200 bg-navy-50 px-4 py-3 text-sm text-text">
+                  <Info className="mt-0.5 size-4 shrink-0 text-navy" />
+                  <p>{t('explore.didYouMean', { term: didYouMean })}</p>
+                </div>
+              )}
               <p className="mb-4 font-mono text-xs text-muted">
                 {t('explore.count', { count: total })}
               </p>

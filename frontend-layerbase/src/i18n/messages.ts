@@ -563,6 +563,10 @@ export const messages = {
       },
       empty: 'No hay componentes que coincidan con tu búsqueda.',
       count: '{count} componentes',
+      // Aviso cuando los resultados llegan por parecido y no por coincidencia:
+      // sin él, quien busca "carusel" recibe cosas que no contienen lo que
+      // escribió y no sabe si el buscador le está corrigiendo o fallando.
+      didYouMean: 'Nada coincide con «{term}». Esto es lo más parecido:',
       loginToAccess: 'Inicia sesión para acceder',
       purchaseSoon: 'Las compras estarán disponibles pronto.',
       buyFor: 'Comprar por {price}',
@@ -1253,6 +1257,7 @@ export const messages = {
       },
       empty: 'No components match your search.',
       count: '{count} components',
+      didYouMean: 'Nothing matches “{term}”. Here is the closest we found:',
       loginToAccess: 'Sign in to access',
       purchaseSoon: 'Purchases will be available soon.',
       buyFor: 'Buy for {price}',

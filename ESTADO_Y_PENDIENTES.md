@@ -425,7 +425,12 @@ stack:
   filtros, la paginación y las policies aplican sin tocar nada.
 - `laravel/scout` y `meilisearch/meilisearch-php` **fuera del `composer.json`**.
 
-Frontera en `tests/Feature/Component/SearchTest.php` (17 casos).
+- La respuesta del listado dice por qué vía vinieron los resultados
+  (`search.fuzzy`), y Explore avisa con un "nada coincide con «carusel», esto es
+  lo más parecido". Sin eso, quien busca con una errata recibe componentes que no
+  contienen lo que escribió y no puede distinguir una corrección de un fallo.
+
+Frontera en `tests/Feature/Component/SearchTest.php` (19 casos).
 
 #### Lo que arrastró: la suite dejó de correr en SQLite
 
