@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Component\ComponentFileController;
 use App\Http\Controllers\Api\Component\ComponentStateController;
 use App\Http\Controllers\Api\Component\TagController;
 use App\Http\Controllers\Api\Profile\ProfileController;
+use App\Http\Controllers\Api\Review\ReviewController;
 use App\Http\Controllers\Api\User\PublicProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -134,6 +135,19 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
 /*
 |--------------------------------------------------------------------------
+| Valoraciones
+|--------------------------------------------------------------------------
+| Operar sobre una valoración concreta no depende del componente, así que
+| cuelgan de /reviews y no de /components/{c}/reviews/{r}.
+*/
+Route::middleware(['auth:sanctum', 'active'])->prefix('reviews')->group(function () {
+    Route::patch('{review}', [ReviewController::class, 'update'])->name('reviews.update');
+    Route::delete('{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+    Route::post('{review}/report', [ReviewController::class, 'report'])->name('reviews.report');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Módulo 3 — Componentes (CRUD, moderación y archivos)
 |--------------------------------------------------------------------------
 | Listado y detalle son públicos (solo publicados). Creación/edición/borrado,
@@ -167,6 +181,12 @@ Route::prefix('components')->group(function () {
         ->middleware('auth.optional')
         ->name('components.index');
 
+    // Valoraciones: leer es público (auth opcional, para marcar cuál es la
+    // tuya); escribir exige sesión y pasa por ReviewPolicy.
+    Route::get('{component}/reviews', [ReviewController::class, 'index'])
+        ->middleware('auth.optional')
+        ->name('components.reviews.index');
+
     // Código para el render en sandbox de la ficha. Público con auth opcional:
     // la policy `previewSource` solo lo sirve si el componente es gratuito
     // (o propio/comprado). No cuenta como descarga.
@@ -184,6 +204,8 @@ Route::prefix('components')->group(function () {
         Route::delete('{component}', [ComponentController::class, 'destroy'])->name('components.destroy');
 
         // Máquina de estados de moderación.
+        Route::post('{component}/reviews', [ReviewController::class, 'store'])->name('components.reviews.store');
+
         Route::post('{component}/submit', [ComponentStateController::class, 'submit'])->name('components.submit');
         Route::post('{component}/unpublish', [ComponentStateController::class, 'unpublish'])->name('components.unpublish');
         // Vuelta a borrador tras un rechazo o una despublicación: sin esto un

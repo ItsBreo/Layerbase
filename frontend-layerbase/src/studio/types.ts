@@ -76,6 +76,26 @@ export interface Component {
   can_download_source: boolean
 }
 
+/** Valoración de un componente. */
+export interface Review {
+  id: number
+  rating: number
+  body: string
+  created_at: string
+  updated_at: string
+  author?: User
+  /** Marcado por el backend: evita comparar ids en el frontend. */
+  is_mine: boolean
+  /** Solo para admin. */
+  reported?: boolean
+  report_reason?: string | null
+}
+
+export interface ReviewPayload {
+  rating: number
+  body: string
+}
+
 /** Payload de creación (POST /components). */
 export interface CreateComponentPayload {
   title: string

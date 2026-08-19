@@ -30,6 +30,7 @@ import { componentsApi } from '@/studio/api'
 import { ComponentSandbox } from '@/studio/ComponentSandbox'
 import { useComponent, usePreviewCode } from '@/studio/hooks'
 import { componentGradient } from '@/studio/placeholder'
+import { Reviews } from '@/studio/Reviews'
 import type { Component } from '@/studio/types'
 
 export default function ComponentDetail() {
@@ -188,6 +189,11 @@ export default function ComponentDetail() {
 
         {/* README */}
         {readme?.url && <Readme url={readme.url} />}
+
+        {/* Valoraciones */}
+        <motion.div variants={fadeUpItem}>
+          <Reviews component={component} />
+        </motion.div>
       </motion.main>
     </AppShell>
   )

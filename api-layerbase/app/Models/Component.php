@@ -262,6 +262,50 @@ class Component extends Model
         return false;
     }
 
+    /** @return HasMany<Review, $this> */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    /**
+     * Recalcula `rating_avg` y `rating_count` a partir de las valoraciones.
+     *
+     * Las dos columnas se enseñan en las tarjetas, en la ficha y en el resumen
+     * de autor desde el primer día, y hasta ahora **nadie las escribía**: la
+     * nota que veía un visitante era siempre la que dejó el seeder.
+     *
+     * Solo cuentan las valoraciones VISIBLES: ni las reportadas ni las
+     * retiradas por un admin. Una valoración que se oculta del público no puede
+     * seguir moviendo la nota pública — sería ocultarla a medias.
+     *
+     * Se recalcula en vez de ajustar deltas, por el mismo motivo que en el
+     * catálogo: una media incremental se desvía en cuanto se escapa un caso.
+     *
+     * @param  array<int, int|null>  $ids
+     */
+    public static function recountRatings(array $ids): void
+    {
+        $ids = array_values(array_unique(array_filter($ids)));
+
+        if ($ids === []) {
+            return;
+        }
+
+        $visible = 'from reviews
+                    where reviews.component_id = components.id
+                      and not reviews.reported
+                      and reviews.deleted_at is null';
+
+        static::query()->whereIn('id', $ids)->update([
+            'rating_count' => DB::raw("(select count(*) {$visible})"),
+            // AVG devuelve NULL sin filas, que es justo lo que debe quedar en
+            // un componente sin valoraciones: null y no 0, porque un 0 se leería
+            // como "valorado pésimo" en vez de "todavía sin valorar".
+            'rating_avg' => DB::raw("(select avg(reviews.rating) {$visible})"),
+        ]);
+    }
+
     /** @return HasMany<ComponentView, $this> */
     public function views(): HasMany
     {

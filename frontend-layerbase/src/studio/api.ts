@@ -18,6 +18,8 @@ import type {
   DownloadResponse,
   ModerationCounts,
   Paginated,
+  Review,
+  ReviewPayload,
   Stack,
   Tag,
   UpdateComponentPayload,
@@ -204,5 +206,39 @@ export const catalogApi = {
       params: q ? { q } : undefined,
     })
     return Array.isArray(data) ? data : data.data
+  },
+}
+
+/**
+ * Valoraciones. Leer es público; escribir exige sesión y pasa por la policy
+ * (no puedes valorar lo tuyo, ni dos veces, ni sin el email verificado).
+ */
+export const reviewsApi = {
+  async list(slug: string, page = 1): Promise<Paginated<Review>> {
+    const { data } = await api.get<Paginated<Review>>(`/components/${slug}/reviews`, {
+      params: { page },
+    })
+    return data
+  },
+
+  async create(slug: string, payload: ReviewPayload): Promise<Review> {
+    const { data } = await api.post<{ message: string; data: Review }>(
+      `/components/${slug}/reviews`,
+      payload,
+    )
+    return data.data
+  },
+
+  async update(id: number, payload: Partial<ReviewPayload>): Promise<Review> {
+    const { data } = await api.patch<{ message: string; data: Review }>(`/reviews/${id}`, payload)
+    return data.data
+  },
+
+  async remove(id: number): Promise<void> {
+    await api.delete(`/reviews/${id}`)
+  },
+
+  async report(id: number, reason: string): Promise<void> {
+    await api.post(`/reviews/${id}/report`, { reason })
   },
 }

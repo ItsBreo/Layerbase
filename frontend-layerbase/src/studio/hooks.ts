@@ -15,13 +15,20 @@ import {
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api'
 import { useI18n } from '@/i18n/useI18n'
-import { catalogApi, componentsApi, moderationApi, type ComponentFilters } from '@/studio/api'
+import {
+  catalogApi,
+  componentsApi,
+  moderationApi,
+  reviewsApi,
+  type ComponentFilters,
+} from '@/studio/api'
 import { unzipFirstTextFile } from '@/studio/zip'
 import type {
   Component,
   ComponentFileType,
   ComponentStatus,
   CreateComponentPayload,
+  ReviewPayload,
   Stack,
   UpdateComponentPayload,
 } from '@/studio/types'
@@ -297,4 +304,73 @@ export function useUploadFile(idOrSlug: string | number) {
     },
     onError: (e) => toast.error(getErrorMessage(e)),
   })
+}
+
+// --- Valoraciones -----------------------------------------------------------
+
+export const reviewKeys = {
+  all: ['reviews'] as const,
+  list: (slug: string) => ['reviews', slug] as const,
+}
+
+export function useReviews(slug: string | undefined) {
+  return useQuery({
+    queryKey: reviewKeys.list(slug ?? ''),
+    queryFn: () => reviewsApi.list(slug as string),
+    enabled: !!slug,
+  })
+}
+
+/**
+ * Invalidación común a todas las mutaciones de valoraciones.
+ *
+ * Se invalida también el detalle del componente, no solo la lista: escribir,
+ * editar o retirar una valoración mueve `rating_avg` y `rating_count`, que se
+ * pintan en la cabecera de la ficha y en las tarjetas.
+ */
+function useReviewMutation<TVars>(
+  slug: string,
+  mutationFn: (vars: TVars) => Promise<unknown>,
+  successKey: string,
+) {
+  const qc = useQueryClient()
+  const { t } = useI18n()
+  return useMutation({
+    mutationFn,
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: reviewKeys.list(slug) })
+      void qc.invalidateQueries({ queryKey: componentKeys.all })
+      toast.success(t(successKey))
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
+  })
+}
+
+export function useCreateReview(slug: string) {
+  return useReviewMutation(
+    slug,
+    (payload: ReviewPayload) => reviewsApi.create(slug, payload),
+    'reviews.toast.created',
+  )
+}
+
+export function useUpdateReview(slug: string) {
+  return useReviewMutation(
+    slug,
+    ({ id, payload }: { id: number; payload: Partial<ReviewPayload> }) =>
+      reviewsApi.update(id, payload),
+    'reviews.toast.updated',
+  )
+}
+
+export function useDeleteReview(slug: string) {
+  return useReviewMutation(slug, (id: number) => reviewsApi.remove(id), 'reviews.toast.deleted')
+}
+
+export function useReportReview(slug: string) {
+  return useReviewMutation(
+    slug,
+    ({ id, reason }: { id: number; reason: string }) => reviewsApi.report(id, reason),
+    'reviews.toast.reported',
+  )
 }
