@@ -1,10 +1,15 @@
 # Layerbase — estado, vulnerabilidades y pendientes
 
-> Auditoría del 2026-08-16, sobre `feature/panel-admin-moderacion` (commit `99d593b`).
-> Suite: 66 tests en verde. Se revisó código real, no documentación.
+> Auditoría inicial del 2026-08-16 sobre `feature/panel-admin-moderacion` (commit
+> `99d593b`), con 66 tests. **Vivo: última actualización 2026-08-19, 179 tests en
+> verde.** Se revisa código real, no documentación.
 >
 > Orden de trabajo acordado: **funcional primero, estética después**. El módulo de
-> suscripciones va **al final** de todo.
+> suscripciones va **al final** de todo, y la pantalla de preferencias justo antes.
+>
+> Cómo leerlo: la sección **0** es lo cerrado, la **6** es lo que queda repartido
+> por sesiones. Las secciones 1-5 son el detalle del hallazgo original y se dejan
+> aunque estén resueltas, porque explican **por qué** algo se hizo como se hizo.
 
 ---
 
@@ -81,7 +86,12 @@ resolverla. Vive en `ComponentPolicy::moderate` + `User::hasOtherActiveAdmins`.
 
 ## 1. Vulnerabilidades
 
-### 1.1 CRÍTICA — Apropiación de cuenta vía OAuth + registro sin verificar
+*Todas cerradas. Se conserva el diagnóstico completo porque es lo que justifica
+reglas que de otro modo parecen arbitrarias — y porque **1.1 se revisó el
+2026-08-19** al automatizar la verificación de email: ver el apartado al final de
+la sección 0 antes de tocar nada del flujo de OAuth.*
+
+### 1.1 CRÍTICA — Apropiación de cuenta vía OAuth + registro sin verificar — ✅ cerrada (arreglo revisado el 2026-08-19)
 
 **Dónde:** `app/Http/Controllers/Api/Auth/SocialAuthController.php` → `upsertUser()`, y
 `RegisterController` (no envía verificación).
@@ -108,7 +118,7 @@ conoce el atacante, y este entra cuando quiera.
 Vincular solo si el email está verificado en ambos lados; si no, o se crea cuenta aparte o
 se exige confirmar la propiedad del email. Y añadir verificación de email al registro.
 
-### 1.2 ALTA — OAuth sin validación de `state` (CSRF de inicio de sesión)
+### 1.2 ALTA — OAuth sin validación de `state` (CSRF de inicio de sesión) — ✅ cerrada
 
 **Dónde:** `SocialAuthController::redirect()` y `callback()`, ambos con `->stateless()`.
 
@@ -123,7 +133,7 @@ parar a esa cuenta.
 Socialite): generarlo en `redirect()`, guardarlo en cache con TTL corto y validarlo en
 `callback()`.
 
-### 1.3 MEDIA (latente) — El disco `public` desactiva toda la protección de descargas
+### 1.3 MEDIA (latente) — El disco `public` desactiva toda la protección de descargas — ✅ cerrada
 
 **Dónde:** `config/components.php` y `app/Models/ComponentFile.php::temporaryUrl()`.
 
@@ -140,7 +150,7 @@ producto — queda accesible sin pasar por la policy, para siempre y para cualqu
 fallar de forma ruidosa en vez de devolver una URL permanente, y la config debe dejar de
 sugerir `public`.
 
-### 1.4 BAJA — Un admin puede aprobar y publicar su propio componente
+### 1.4 BAJA — Un admin puede aprobar y publicar su propio componente — ✅ cerrada
 
 **Dónde:** `app/Policies/ComponentPolicy.php::before()`, que concede todo a los admin.
 
@@ -166,26 +176,30 @@ por iniciativa propia.
 
 ## 2. Bugs funcionales
 
-### 2.1 El contador de descargas nunca sube
+*Todos resueltos salvo **2.4**, que va atado al módulo de compras. Se conserva el
+diagnóstico original de cada uno: es lo que explica por qué la solución es la que
+es.*
+
+### 2.1 El contador de descargas nunca sube — ✅ bloque 2
 
 `ComponentFileController::download()` tiene un `TODO` en lugar del incremento. `downloads`
 se muestra en las tarjetas, en la ficha y en el resumen de autor, y **siempre vale lo que
 dejó el seeder**. Es una métrica visible que miente.
 
-### 2.2 `stats_public` no lo puede ver nadie
+### 2.2 `stats_public` no lo puede ver nadie — ✅ bloque 3
 
 Existe la columna, el conmutador en el dashboard y la lógica en `UserResource` para enseñar
 el resumen a terceros… pero **no hay página ni endpoint de perfil público**. No existe
 `GET /users/{id}` ni ruta `/users/:id` en el frontend. Hoy el ajuste no hace absolutamente
 nada: es configuración muerta.
 
-### 2.3 Los ficheros no se borran al eliminar un componente
+### 2.3 Los ficheros no se borran al eliminar un componente — ✅ bloque 2
 
 `ComponentController::destroy()` hace soft delete del componente, pero los ficheros siguen
 en disco y en `component_files`. Con S3/R2 eso es dinero cada mes por objetos que ya no
 referencia nadie.
 
-### 2.5 El ZIP del código solo admite UN archivo y sin comprimir
+### 2.5 El ZIP del código solo admite UN archivo y sin comprimir — ✅ sesión F
 
 **Dónde:** `src/studio/zip.ts` y `src/studio/ComponentForm.tsx`.
 
@@ -199,10 +213,13 @@ ZIP subido por otra vía se descargaría bien y **reventaría el render en vivo*
 
 La limitación de fondo es de producto: **un componente real suele tener varios ficheros**
 (componente, estilos, tipos, tests) y hoy solo cabe uno. Va a hacer falta una librería de
-verdad (jszip) y soporte multi-archivo en el editor. Documentado como limitación en
+verdad y soporte multi-archivo en el editor. Documentado como limitación en
 `/resources/docs` mientras tanto.
 
-### 2.4 `hasPurchases()` devuelve siempre `false`
+*Resuelto en la sesión F con **fflate**, no jszip: pesa bastante menos y hace
+falta en las dos direcciones (leer y escribir).*
+
+### 2.4 `hasPurchases()` devuelve siempre `false` — 🔴 abierto
 
 Está encapsulado a propósito hasta que exista `purchases`, pero significa que **hoy un
 componente con compras se borraría** en vez de despublicarse. Inofensivo mientras no haya
@@ -212,28 +229,32 @@ pagos; peligroso en cuanto los haya. Va atado al módulo de compras.
 
 ## 3. Páginas que faltan
 
-### 3.1 Legales — bloquean el lanzamiento
+*Todas hechas salvo el **texto** legal, que no depende del código. El detalle se
+mantiene porque explica qué resolvía cada una.*
+
+### 3.1 Legales — 🟡 estructura hecha, **texto pendiente** (bloquea el lanzamiento)
 
 Los cuatro enlaces del footer apuntan a `#`: **aviso legal, privacidad, facturación y
 cookies**. Un marketplace que va a cobrar y que opera con datos personales en la UE no
 puede salir sin ellas.
 
-### 3.2 Perfil público de autor
+### 3.2 Perfil público de autor — ✅ bloque 3
 
 No existe. Es lo que da sentido a `stats_public` (2.2) y lo que convierte a un autor en algo
 más que un nombre bajo una tarjeta. Necesita endpoint público + ruta `/users/:slug`.
 
-### 3.3 Recursos del footer
+### 3.3 Recursos del footer — ✅ sesión D
 
 Documentación, "cómo subir un componente" y buenas prácticas: los tres siguen a `#`. Menos
 urgentes que las legales, pero son los que enseñan a publicar — y hoy **los dos requisitos
-que bloquean el envío a revisión** (código fuente subido y email verificado) no están
-explicados en ninguna parte: el autor se los encuentra como un 422 al pulsar el botón.
+que bloquean el envío a revisión** (código fuente subido y email verificado) no estaban
+explicados en ninguna parte: el autor se los encontraba como un 422 al pulsar el botón.
+*(El de email verificado ya no aplica en la práctica: ver el cambio de 1.1.)*
 
 Detalle completo, con los formatos y límites ya verificados contra el código, en la
 **Sesión D**.
 
-### 3.4 Panel de admin — secciones que faltan
+### 3.4 Panel de admin — ✅ sesiones A y B
 
 - **Métricas / resumen**: usuarios por rol, componentes por estado, descargas totales.
 - **Catálogo**: CRUD de categorías y limpieza de tags huérfanos. Hoy las categorías solo se
@@ -243,15 +264,19 @@ Detalle completo, con los formatos y límites ya verificados contra el código, 
 
 ## 4. Módulos sin empezar
 
+*Estado de la tabla al 2026-08-19. Las filas tachadas se dejan a propósito: la
+nota explica por qué existía el hueco.*
+
 | Módulo | Estado | Nota |
 | --- | --- | --- |
-| **Verificación de email** | No existe | Es parte del arreglo de 1.1, no un extra |
-| **Compras / Stripe** | `stripe/stripe-php` instalado, **cero usos** | Sin esto los componentes de pago no se pueden comprar |
-| **Reviews** | Sin tabla ni modelo | `rating_avg` y `rating_count` existen y nadie los escribe |
-| **Notificaciones** | Sin tabla | 3 `TODO` esperándola en la moderación |
-| **`component_views`** | Sin tabla | Sin analítica de visitas |
-| **Observers** | Ninguno | Los contadores desnormalizados no los mantiene nadie |
-| **Suscripciones** | Sin empezar | **Aplazado al final por decisión propia** |
+| **Compras / Stripe** | 🔴 `stripe/stripe-php` instalado, **cero usos** | Sin esto los componentes de pago no se pueden comprar |
+| **Suscripciones** | 🔴 Sin empezar | **Aplazado al final por decisión propia** |
+| ~~Verificación de email~~ | 🟡 Hecha, y luego **desactivada a propósito** | Se verifica al entrar; ver el cambio de 1.1 en la sección 0 |
+| ~~Reviews~~ | ✅ sesión C | `rating_avg` y `rating_count` existían y no los escribía nadie |
+| ~~Notificaciones~~ | ✅ sesión E | In-app, canal `database`. Cerró los 3 `TODO` de moderación |
+| ~~`component_views`~~ | ✅ sesión A | Agregadas por día vía upsert |
+| ~~Observers~~ | ✅ sesiones B y C | Recuentan, no acumulan deltas: un delta perdido no se recupera |
+| ~~Búsqueda~~ | ✅ sesión G | PostgreSQL FTS. Meilisearch evaluado y descartado |
 
 ---
 
@@ -263,8 +288,8 @@ Detalle completo, con los formatos y límites ya verificados contra el código, 
   HSL del hash del slug, fuera de la paleta de marca. *(Estético — aplazado.)*
 - **Sin captura automática de portada.** Sin imagen, la rejilla cae al placeholder; hace
   falta el job con Chromium headless.
-- **3 errores de ESLint preexistentes** en `src/auth/` (`ui.tsx`, `AuthContext.tsx`,
-  `Register.tsx`, `ResetPassword.tsx`): reglas del React Compiler.
+- ~~**3 errores de ESLint preexistentes**~~ en `src/auth/`: resueltos en el bloque 6.
+  `npm run lint` sale limpio.
 - **Bundle de 1,4 MB** sin code splitting.
 - **`.gitignore` esconde toda la documentación del proyecto:** `CLAUDE.md` (línea 2) y
   `/documents` (línea 3). Nada de lo que vive ahí se comparte con el equipo ni existe fuera
@@ -488,6 +513,89 @@ autores. Arrastra consigo:
 - `userCanAccessSource()`, que tiene el mismo `TODO` esperando la tabla.
 - Decidir la **comisión**: la hoja de ruta dice 10% / 5% y el modelo de datos
   dice 15%. Sigue sin resolverse.
+
+---
+
+### Sesión I — Despliegue
+
+*Varias sesiones. Auditado el 2026-08-19 sobre el código real.*
+
+Objetivo: **preproducción** en Vercel/Cloudflare (frontend) + Cloud Run
+(backend), gratis, hasta que haya algo real. Proyecto de GCP ya creado
+("Layerbase beta"); `gcloud` instalado en local (SDK 581), **sin autenticar
+todavía**.
+
+#### Bloqueantes de código — sin esto no funciona desplegado
+
+1. **El frontend tiene la URL de la API a fuego.** `src/lib/api.ts` usa
+   `baseURL: '/api'`, que en local funciona porque lo proxya Vite. En Vercel el
+   SPA es HTML estático: `/api` pegaría contra el dominio del frontend. Salida:
+   una `VITE_API_URL`, o un `vercel.json` con rewrites (esto último mantiene
+   mismo origen y ahorra CORS entero). **No existe `vercel.json`.**
+2. **Los ficheros siguen en disco local** (`COMPONENTS_FILES_DISK=local`). Cloud
+   Run tiene disco efímero: lo subido desaparece al escalar o reciclar.
+3. **Los avatares, igual y por partida doble.** Disco `public`
+   (`config/profile.php`) con URL **relativa** `/storage/...`: disco efímero, y
+   además esa URL se resolvería contra el dominio del frontend, donde no hay
+   nada.
+4. **La imagen no sirve para Cloud Run.** Hoy son PHP-FPM y Nginx en
+   contenedores separados hablando por red interna; Cloud Run corre **uno solo**
+   escuchando en `$PORT`.
+
+#### Lo que NO es un problema (comprobado, contra lo que se dijo antes)
+
+- **El `state` de OAuth en cache sí sobrevive a varias instancias:**
+  `CACHE_STORE=database`, no `file`.
+- **No hace falta worker de colas:** ninguna clase implementa `ShouldQueue` y
+  las notificaciones van por canal `database`. El correo se manda síncrono, que
+  ralentiza la respuesta pero funciona.
+- **CORS ya está parametrizado por entorno** (`CORS_ALLOWED_ORIGINS`), sin `*`
+  con credenciales.
+
+#### Configuración a rellenar
+
+- `APP_DEBUG=false`, `APP_ENV=production`, `CORS_ALLOWED_ORIGINS`.
+- **`ADMIN_EMAIL` / `ADMIN_PASSWORD` vacíos** en `.env.example`: despliegas,
+  migras y te quedas sin ningún admin.
+- Región: `europe-southwest1` (Madrid) o `europe-west1`.
+
+#### Servicios gratuitos evaluados
+
+| Pieza | Elegido | Alternativas |
+| --- | --- | --- |
+| Frontend | Cloudflare Pages | Vercel (Hobby es **solo no comercial**: choca con Stripe), Netlify |
+| Backend | Cloud Run | Oracle Cloud Always Free (una VM, `docker compose` tal cual) |
+| PostgreSQL | Neon o Supabase | Cloud SQL **no tiene free tier** |
+| Ficheros | Cloudflare R2 | Supabase Storage, GCS |
+
+**Requisito duro sobre la base de datos:** desde la sesión G el backend exige
+`CREATE EXTENSION unaccent` y `pg_trgm`. Si el proveedor no lo permite, la
+migración falla al arrancar. Confirmarlo **antes** de elegir.
+
+#### Depende de terceros, no del código
+
+- **Dominio propio** (~10 €/año). Es lo que desbloquea el correo transactional:
+  todos los proveedores exigen verificar un dominio con DNS para enviar a
+  direcciones ajenas. Ya no bloquea el registro (ver el cambio de 1.1), pero sí
+  cualquier correo futuro.
+- **Facturación vinculada al proyecto de GCP.** Un proyecto nuevo **no la
+  hereda**. Cloud Run la exige aunque solo se use el free tier.
+- **Habilitar Cloud Run Admin API y Artifact Registry API.**
+- **Texto legal.** Las cuatro páginas están montadas y el propio aviso dice "no
+  debe publicarse en este estado".
+
+---
+
+### Vincular cuentas desde el perfil
+
+Lo dejó pendiente el cambio de 1.1 del 2026-08-19: OAuth ya no vincula por email,
+así que **quien se registró con contraseña no puede entrar después con Google**
+usando ese mismo correo. Hoy recibe "ya hay una cuenta registrada con ese email"
+y no tiene salida.
+
+La salida limpia es una pantalla en el perfil que enganche Google/GitHub a la
+cuenta ya iniciada: ahí la identidad está probada por la sesión, no por el
+correo, así que es seguro. No bloquea el despliegue.
 
 ---
 
