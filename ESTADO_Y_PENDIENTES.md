@@ -270,7 +270,7 @@ nota explica por qué existía el hueco.*
 | Módulo | Estado | Nota |
 | --- | --- | --- |
 | **Compras / Stripe** | 🔴 `stripe/stripe-php` instalado, **cero usos** | Sin esto los componentes de pago no se pueden comprar |
-| **Suscripciones** | 🔴 Sin empezar | **Aplazado al final por decisión propia** |
+| **Suscripciones** | 🔴 Sin empezar | Plan Pro/Team de la plataforma. **Aplazado al final por decisión propia.** No confundir con vender un componente: eso es siempre pago único |
 | ~~Verificación de email~~ | 🟡 Hecha, y luego **desactivada a propósito** | Se verifica al entrar; ver el cambio de 1.1 en la sección 0 |
 | ~~Reviews~~ | ✅ sesión C | `rating_avg` y `rating_count` existían y no los escribía nadie |
 | ~~Notificaciones~~ | ✅ sesión E | In-app, canal `database`. Cerró los 3 `TODO` de moderación |
@@ -322,9 +322,9 @@ de lo que queda ya no es ese, es el acordado el 2026-08-19:**
 | 1 | **I — Despliegue de preproducción** | 🔵 siguiente |
 | 2 | **J — Paso a producción** | 🔴 después |
 | — | Vincular cuentas desde el perfil | 🔴 sin fecha, no bloquea |
-| 3 | **K+ — Compras / Stripe** | ⏸ **últimas fases, por decisión propia** |
+| 3 | **K+ — Compras / Stripe** — solo pago único a precio fijo | ⏸ **últimas fases, por decisión propia** |
 | 4 | **Pantalla de preferencias** | ⏸ **últimas fases, por decisión propia** |
-| 5 | **Suscripciones** | ⏸ al final de todo |
+| 5 | **Suscripciones** (plan Pro/Team de la plataforma, no venta de componentes) | ⏸ al final de todo |
 
 ---
 
@@ -628,16 +628,37 @@ correo, así que es seguro. No bloquea el despliegue.
 > **Aplazado a las últimas fases del proyecto por decisión propia (2026-08-19).**
 > No se empieza hasta entonces, aunque quede hueco antes.
 
-Checkout, webhooks, tabla `purchases`, y Connect Express para pagar a los
-autores. Arrastra consigo:
+#### Alcance cerrado: precio fijo y pago único
+
+**Un componente se vende SIEMPRE a precio fijo y de una sola vez. Nunca por
+suscripción ni por tramos** (decisión propia, 2026-08-19).
+
+Se anota aquí y no al empezar el módulo porque es lo que evita construir de más:
+sin esta frase, "vender un componente" se abre a precios recurrentes, planes por
+autor y prorrateos, y cada uno de ellos arrastra webhooks, estados intermedios y
+casos de reembolso propios. Con el alcance cerrado, Stripe se reduce a un
+Checkout de pago único.
+
+Conviene distinguirlo de las **suscripciones Pro/Team** (tabla `subscriptions`
+del modelo de datos): esas son un plan de la plataforma para el usuario, no una
+forma de vender un componente, y siguen aparcadas al final de todo. Esta decisión
+no las resucita ni las cancela.
+
+El código actual ya encaja: `components.price` es un escalar y los filtros
+(`free`, `paid`, `min_price`, `max_price`) tratan el precio como una cantidad
+única. No hay nada que deshacer, solo que no ampliar.
+
+#### Lo que trae
+
+Checkout de pago único, webhooks, tabla `purchases`, y Connect Express para pagar
+a los autores. Arrastra consigo:
 
 - **2.4** (`hasPurchases()` devuelve siempre `false`, así que hoy un componente
   comprado se borraría en vez de despublicarse).
 - `userCanAccessSource()`, que tiene el mismo `TODO` esperando la tabla.
-- Decidir la **comisión**: la hoja de ruta dice 10% / 5% y el modelo de datos
-  dice 15%. Sigue sin resolverse.
-
----
+- Decidir la **comisión**, que sigue abierta: la hoja de ruta dice 10% / 5% y el
+  modelo de datos dice 15%. Con el pago único cerrado, la pregunta se reduce a
+  qué se queda la plataforma de cada venta — porcentaje o cantidad fija.
 
 ---
 
@@ -669,4 +690,6 @@ escribir muchas plantillas de correo, o habrá que traducirlas todas después.
 - **Media Library**: instalada y sin usar. O se adopta o se quita de
   `composer.json`.
 - **Placeholder de degradado** fuera de la paleta de marca. *(Estético.)*
-- **Suscripciones** — al final de todo, por decisión propia.
+- **Suscripciones** (plan Pro/Team de la plataforma) — al final de todo, por
+  decisión propia. La venta de un componente es **siempre pago único a precio
+  fijo**; ver el alcance cerrado en la sesión K+.
