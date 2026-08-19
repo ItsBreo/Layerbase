@@ -37,6 +37,7 @@
 | — | `rating_avg` y `rating_count` no los escribía nadie | sesión C |
 | — | Correo real en desarrollo (Mailpit) | sesión D |
 | — | Notificaciones in-app: los 3 `TODO` de moderación, cerrados | sesión E |
+| 2.5 | Multi-archivo: el ZIP admitía un solo fichero y sin comprimir | sesión F |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 

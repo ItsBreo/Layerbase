@@ -22,7 +22,7 @@ import {
   reviewsApi,
   type ComponentFilters,
 } from '@/studio/api'
-import { unzipFirstTextFile } from '@/studio/zip'
+import { unzipFiles } from '@/studio/zip'
 import type {
   Component,
   ComponentFileType,
@@ -88,9 +88,9 @@ export function useComponent(idOrSlug: string | number | undefined) {
 }
 
 /**
- * Código listo para el sandbox: pide la URL firmada, descarga el ZIP y extrae
- * el texto. Lo comparten la vista previa del autor y la ficha pública, así que
- * el resultado se cachea por slug.
+ * Ficheros listos para el sandbox: pide la URL firmada, descarga el ZIP y
+ * extrae su contenido. Lo comparten la vista previa del autor y la ficha
+ * pública, así que el resultado se cachea por slug.
  *
  * `enabled` lo decide quien llama (React sigue exigiendo que el hook se invoque
  * siempre): en la ficha solo tiene sentido si el componente es React, tiene
@@ -103,7 +103,7 @@ export function usePreviewCode(idOrSlug: string | undefined, enabled = true) {
       const { url } = await componentsApi.previewCode(idOrSlug as string)
       const res = await fetch(url)
       if (!res.ok) throw new Error('No se pudo descargar el código del componente.')
-      return unzipFirstTextFile(await res.arrayBuffer())
+      return unzipFiles(await res.arrayBuffer())
     },
     // Un 403 (componente de pago) no se reintenta: la respuesta no va a cambiar.
     retry: false,

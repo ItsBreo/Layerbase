@@ -295,7 +295,7 @@ export const messages = {
         content: {
           what: 'Un componente es una pieza de interfaz lista para usar: una tarjeta de precios, un formulario de acceso, una tabla de datos. En Layerbase cada componente reúne tres cosas:\n\n- **El código**, que es el producto.\n- **Un README**, que explica cómo usarlo.\n- **Una portada** opcional, que es lo que se ve en la rejilla.\n\nLo publica un autor y lo descubre, previsualiza y descarga cualquiera. Tú decides si es gratuito o de pago.',
           stacks: 'Se admiten **React**, **Angular** y **Vanilla JS**.\n\nLos tres se pueden publicar, descargar y comprar igual. La diferencia está en la previsualización: **el render en vivo de la ficha solo funciona con React**. En Angular y Vanilla la portada depende de la imagen que subas.',
-          files: 'Cada componente tiene como máximo un archivo de cada tipo, y **ninguno puede pasar de 5 MB**.\n\n| Tipo | Formato | Quién lo ve |\n| --- | --- | --- |\n| Código | ZIP | Solo con acceso |\n| README | `.md`, `.markdown` o `.txt` | Público |\n| Portada | PNG, JPEG o WebP | Público |\n\nEl código lo empaqueta la plataforma por ti: lo escribes en el editor y se convierte en un ZIP al guardar. **Hoy es un único archivo de código por componente**; si el tuyo necesita varios, agrúpalos en uno o explica el desglose en el README.\n\nEl README se guarda tal cual y se renderiza como Markdown en la ficha, así que puedes usar listas, tablas y bloques de código sin problema.',
+          files: 'Cada componente tiene como máximo un archivo de cada tipo, y **ninguno puede pasar de 5 MB**.\n\n| Tipo | Formato | Quién lo ve |\n| --- | --- | --- |\n| Código | ZIP | Solo con acceso |\n| README | `.md`, `.markdown` o `.txt` | Público |\n| Portada | PNG, JPEG o WebP | Público |\n\nEl código lo empaqueta la plataforma por ti: lo escribes en el editor y se convierte en un ZIP al guardar. Puedes tener **varios archivos** —el componente, sus estilos, sus tipos— con las pestañas del editor.\n\nUno de ellos es el **punto de entrada**: el que se renderiza. Se busca por nombre (`App.jsx`, `App.js`…) y no se puede borrar. Los demás se importan desde él con rutas relativas normales, como en cualquier proyecto.\n\nEl README se guarda tal cual y se renderiza como Markdown en la ficha, así que puedes usar listas, tablas y bloques de código sin problema.',
           lifecycle: 'Ningún componente aparece en el marketplace sin que alguien lo revise. El recorrido es este:\n\n1. **Borrador** — lo estás preparando. Solo lo ves tú.\n2. **En revisión** — lo has enviado. Ya no se puede editar mientras espera.\n3. **Publicado** — aprobado. Visible para todo el mundo.\n4. **Rechazado** — con un motivo escrito para que sepas qué corregir.\n\nUn componente publicado se puede **despublicar** en cualquier momento: deja de verse pero conserva su historial. Desde *rechazado* o *despublicado* se vuelve a **borrador** para corregir y reenviar.',
           access: 'El código nunca se sirve por una URL fija. Al descargar se genera un **enlace firmado que caduca a los 5 minutos**, y quién puede pedirlo depende del componente:\n\n- **Gratuito** — cualquiera, incluso sin cuenta.\n- **De pago** — solo su autor y quien lo haya comprado.\n\nPor eso en un componente de pago no hay render en vivo: ahí el código *es* el producto, y enseñarlo para previsualizar sería regalarlo.',
         },
@@ -638,6 +638,9 @@ export const messages = {
         codeLabel: 'Código fuente',
         codeHint: 'Escribe o pega tu componente. Se empaqueta al enviar a revisión.',
         readmeHint: 'Documenta el uso. Soporta Markdown.',
+        addFile: 'Añadir archivo',
+        removeFile: 'Eliminar {name}',
+        newFilePlaceholder: 'estilos.css',
         loadingCode: 'Cargando tu código guardado…',
         loadingReadme: 'Cargando tu README guardado…',
         codeLoadFailed:
@@ -982,7 +985,7 @@ export const messages = {
         content: {
           what: 'A component is a ready-to-use piece of interface: a pricing card, a sign-in form, a data table. On Layerbase each component brings together three things:\n\n- **The code**, which is the product.\n- **A README**, explaining how to use it.\n- **A cover image**, optional, which is what shows in the grid.\n\nAn author publishes it and anyone can discover, preview and download it. You decide whether it is free or paid.',
           stacks: '**React**, **Angular** and **Vanilla JS** are supported.\n\nAll three can be published, downloaded and bought the same way. The difference is preview: **the live render on the component page only works with React**. For Angular and Vanilla, the cover depends on the image you upload.',
-          files: 'Each component holds at most one file of each type, and **none may exceed 5 MB**.\n\n| Type | Format | Who sees it |\n| --- | --- | --- |\n| Code | ZIP | Only with access |\n| README | `.md`, `.markdown` or `.txt` | Public |\n| Cover | PNG, JPEG or WebP | Public |\n\nThe platform packages the code for you: you write it in the editor and it becomes a ZIP on save. **Today that is one code file per component**; if yours needs several, group them into one or explain the breakdown in the README.\n\nThe README is stored as-is and rendered as Markdown on the page, so lists, tables and code blocks all work.',
+          files: 'Each component holds at most one file of each type, and **none may exceed 5 MB**.\n\n| Type | Format | Who sees it |\n| --- | --- | --- |\n| Code | ZIP | Only with access |\n| README | `.md`, `.markdown` or `.txt` | Public |\n| Cover | PNG, JPEG or WebP | Public |\n\nThe platform packages the code for you: you write it in the editor and it becomes a ZIP on save. You can have **several files** —the component, its styles, its types— using the editor tabs.\n\nOne of them is the **entry point**: the one that gets rendered. It is found by name (`App.jsx`, `App.js`…) and cannot be deleted. The rest are imported from it with normal relative paths, like in any project.\n\nThe README is stored as-is and rendered as Markdown on the page, so lists, tables and code blocks all work.',
           lifecycle: 'No component reaches the marketplace without being reviewed. The path is:\n\n1. **Draft** — you are still preparing it. Only you see it.\n2. **In review** — submitted. It cannot be edited while it waits.\n3. **Published** — approved. Visible to everyone.\n4. **Rejected** — with a written reason so you know what to fix.\n\nA published component can be **unpublished** at any time: it stops being visible but keeps its history. From *rejected* or *unpublished* it goes back to **draft** to be fixed and resubmitted.',
           access: 'Code is never served from a fixed URL. Downloading generates a **signed link that expires in 5 minutes**, and who may request it depends on the component:\n\n- **Free** — anyone, even without an account.\n- **Paid** — only its author and whoever bought it.\n\nThat is why a paid component has no live render: there the code *is* the product, and showing it to preview would be giving it away.',
         },
@@ -1325,6 +1328,9 @@ export const messages = {
         codeLabel: 'Source code',
         codeHint: 'Write or paste your component. It gets packaged on submit.',
         readmeHint: 'Document usage. Markdown supported.',
+        addFile: 'Add file',
+        removeFile: 'Delete {name}',
+        newFilePlaceholder: 'styles.css',
         loadingCode: 'Loading your saved code…',
         loadingReadme: 'Loading your saved README…',
         codeLoadFailed:

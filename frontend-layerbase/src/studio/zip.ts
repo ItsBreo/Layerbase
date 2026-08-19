@@ -1,154 +1,124 @@
 /**
- * Empaquetador ZIP mínimo (método STORE, sin compresión) sin dependencias.
+ * Empaquetado y lectura del código de un componente.
  *
- * El backend acepta el código fuente (`source`) solo como `application/zip`,
- * pero el editor Monaco produce texto plano. Esta utilidad envuelve ese texto
- * en un ZIP válido de un único archivo, que finfo detecta como application/zip.
+ * Un componente son VARIOS ficheros (el componente, sus estilos, sus tipos),
+ * así que el código viaja como un ZIP de verdad con `fflate`.
  *
- * STORE es suficiente para el MVP: el objetivo no es comprimir, sino cumplir el
- * contrato de tipo. Si más adelante se necesitan varios archivos o compresión,
- * conviene migrar a una librería (p. ej. jszip).
+ * Antes esto era un empaquetador escrito a mano que solo sabía meter UN fichero
+ * y sin comprimir (método STORE), y el lector lanzaba excepción con cualquier
+ * ZIP comprimido. Eso limitaba la plataforma a componentes de un solo archivo y,
+ * peor, un ZIP subido por la API con cualquier herramienta normal rompía el
+ * render en vivo.
+ *
+ * El backend no se entera de nada de esto: para él el ZIP es una caja opaca.
  */
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
+import type { Stack } from '@/studio/types'
 
-/** Tabla CRC32 precomputada (polinomio 0xEDB88320). */
-const CRC_TABLE: Uint32Array = (() => {
-  const table = new Uint32Array(256)
-  for (let n = 0; n < 256; n++) {
-    let c = n
-    for (let k = 0; k < 8; k++) {
-      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+/** Los ficheros de un componente: nombre → contenido. */
+export type ComponentFiles = Record<string, string>
+
+/** Extensión de código principal según el stack. */
+const MAIN_EXTENSION: Record<Stack, string> = {
+  react: 'jsx',
+  angular: 'ts',
+  vanilla: 'js',
+}
+
+/** Nombres que se consideran punto de entrada, en orden de preferencia. */
+const ENTRY_CANDIDATES = ['App.jsx', 'App.js', 'App.tsx', 'App.ts', 'index.jsx', 'index.js']
+
+/** Ficheros de partida de un componente nuevo. */
+export function defaultFilesFor(stack: Stack): ComponentFiles {
+  const name = `App.${MAIN_EXTENSION[stack]}`
+
+  if (stack === 'react') {
+    return {
+      [name]: `export default function App() {\n  return <div style={{ padding: 24 }}>Tu componente aquí</div>\n}\n`,
     }
-    table[n] = c >>> 0
   }
-  return table
-})()
 
-function crc32(bytes: Uint8Array): number {
-  let crc = 0xffffffff
-  for (let i = 0; i < bytes.length; i++) {
-    crc = CRC_TABLE[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8)
-  }
-  return (crc ^ 0xffffffff) >>> 0
-}
-
-function dosDateTime(date = new Date()): { time: number; date: number } {
-  const time = (date.getHours() << 11) | (date.getMinutes() << 5) | (date.getSeconds() >> 1)
-  const d = ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate()
-  return { time, date: d }
-}
-
-/** Escribe un entero little-endian en `view` en la posición `offset`. */
-function writeUint(view: DataView, offset: number, value: number, bytes: 2 | 4): void {
-  if (bytes === 2) view.setUint16(offset, value & 0xffff, true)
-  else view.setUint32(offset, value >>> 0, true)
+  return { [name]: '// Tu componente aquí\n' }
 }
 
 /**
- * Crea un Blob ZIP (application/zip) con un único archivo `filename` cuyo
- * contenido es `content` (texto UTF-8).
+ * Cuál de los ficheros es el punto de entrada.
+ *
+ * Se busca un `App.*` y, si no lo hay, se toma el primero. Ese caso no es
+ * teórico: los componentes subidos antes de esto tienen un único fichero
+ * llamado `component.jsx`, y tienen que seguir funcionando.
  */
-export function zipTextFile(filename: string, content: string): Blob {
-  const encoder = new TextEncoder()
-  const nameBytes = encoder.encode(filename)
-  const dataBytes = encoder.encode(content)
-  const crc = crc32(dataBytes)
-  const { time, date } = dosDateTime()
+export function entryFileOf(files: ComponentFiles): string {
+  const names = Object.keys(files)
 
-  const LOCAL_HEADER = 30
-  const CENTRAL_HEADER = 46
-  const END_RECORD = 22
-
-  const localHeaderSize = LOCAL_HEADER + nameBytes.length
-  const centralSize = CENTRAL_HEADER + nameBytes.length
-  const total = localHeaderSize + dataBytes.length + centralSize + END_RECORD
-
-  const buffer = new ArrayBuffer(total)
-  const view = new DataView(buffer)
-  const out = new Uint8Array(buffer)
-  let offset = 0
-
-  // --- Local file header ---
-  writeUint(view, offset, 0x04034b50, 4) // firma
-  writeUint(view, offset + 4, 20, 2) // versión necesaria
-  writeUint(view, offset + 6, 0, 2) // flags
-  writeUint(view, offset + 8, 0, 2) // método: 0 = STORE
-  writeUint(view, offset + 10, time, 2)
-  writeUint(view, offset + 12, date, 2)
-  writeUint(view, offset + 14, crc, 4)
-  writeUint(view, offset + 18, dataBytes.length, 4) // tamaño comprimido
-  writeUint(view, offset + 22, dataBytes.length, 4) // tamaño sin comprimir
-  writeUint(view, offset + 26, nameBytes.length, 2)
-  writeUint(view, offset + 28, 0, 2) // extra field length
-  out.set(nameBytes, offset + LOCAL_HEADER)
-  out.set(dataBytes, offset + localHeaderSize)
-  offset += localHeaderSize + dataBytes.length
-
-  // --- Central directory ---
-  const centralStart = offset
-  writeUint(view, offset, 0x02014b50, 4) // firma
-  writeUint(view, offset + 4, 20, 2) // versión creadora
-  writeUint(view, offset + 6, 20, 2) // versión necesaria
-  writeUint(view, offset + 8, 0, 2) // flags
-  writeUint(view, offset + 10, 0, 2) // método STORE
-  writeUint(view, offset + 12, time, 2)
-  writeUint(view, offset + 14, date, 2)
-  writeUint(view, offset + 16, crc, 4)
-  writeUint(view, offset + 20, dataBytes.length, 4)
-  writeUint(view, offset + 24, dataBytes.length, 4)
-  writeUint(view, offset + 28, nameBytes.length, 2)
-  writeUint(view, offset + 30, 0, 2) // extra
-  writeUint(view, offset + 32, 0, 2) // comentario
-  writeUint(view, offset + 34, 0, 2) // disco
-  writeUint(view, offset + 36, 0, 2) // atributos internos
-  writeUint(view, offset + 38, 0, 4) // atributos externos
-  writeUint(view, offset + 42, 0, 4) // offset del local header
-  out.set(nameBytes, offset + CENTRAL_HEADER)
-  offset += centralSize
-
-  // --- End of central directory ---
-  writeUint(view, offset, 0x06054b50, 4) // firma
-  writeUint(view, offset + 4, 0, 2) // disco
-  writeUint(view, offset + 6, 0, 2) // disco con central dir
-  writeUint(view, offset + 8, 1, 2) // entradas en este disco
-  writeUint(view, offset + 10, 1, 2) // entradas totales
-  writeUint(view, offset + 12, centralSize, 4) // tamaño central dir
-  writeUint(view, offset + 16, centralStart, 4) // offset central dir
-  writeUint(view, offset + 20, 0, 2) // comentario
-
-  return new Blob([buffer], { type: 'application/zip' })
+  return ENTRY_CANDIDATES.find((candidate) => names.includes(candidate)) ?? names[0] ?? ''
 }
 
-/** Envuelve el código en un File .zip listo para subir como `source`. */
-export function codeToSourceFile(code: string, stack: string): File {
-  const ext = stack === 'angular' ? 'ts' : stack === 'vanilla' ? 'js' : 'jsx'
-  const blob = zipTextFile(`component.${ext}`, code)
-  return new File([blob], 'source.zip', { type: 'application/zip' })
+/** Empaqueta los ficheros en un `File` .zip listo para subir como `source`. */
+export function filesToSourceFile(files: ComponentFiles): File {
+  const entries = Object.fromEntries(
+    Object.entries(files).map(([name, content]) => [name, strToU8(content)]),
+  )
+
+  // level 6: compresión razonable sin penalizar el guardado. El límite de
+  // subida son 5 MB y el código de un componente rara vez se acerca.
+  const zipped = zipSync(entries, { level: 6 })
+
+  return new File([zipped as BlobPart], 'source.zip', { type: 'application/zip' })
+}
+
+/**
+ * Extrae los ficheros de texto de un ZIP.
+ *
+ * Se ignoran las entradas de directorio y cualquier fichero que no sea texto
+ * decodificable: el editor no sabría qué hacer con un binario, y colarlo
+ * rompería el sandbox.
+ */
+export function unzipFiles(buffer: ArrayBuffer): ComponentFiles {
+  const raw = unzipSync(new Uint8Array(buffer))
+  const files: ComponentFiles = {}
+
+  for (const [name, bytes] of Object.entries(raw)) {
+    // Las carpetas aparecen como entradas vacías terminadas en '/'.
+    if (name.endsWith('/') || bytes.length === 0) continue
+
+    try {
+      files[name] = strFromU8(bytes)
+    } catch {
+      // Binario dentro del zip: se omite en vez de reventar la lectura entera.
+    }
+  }
+
+  return files
+}
+
+/**
+ * Traduce los ficheros al mapa que espera Sandpack.
+ *
+ * La plantilla `react` de Sandpack arranca importando `./App` desde su
+ * `index.js`, así que SIEMPRE tiene que existir un `/App.js`. Cuando el punto
+ * de entrada se llama de otra forma —`component.jsx` en los componentes
+ * antiguos— no se renombra: se añade un `/App.js` que reexporta el original.
+ * Renombrarlo rompería los imports relativos entre ficheros del propio autor.
+ */
+export function toSandpackFiles(files: ComponentFiles): Record<string, string> {
+  const mounted: Record<string, string> = {}
+
+  for (const [name, content] of Object.entries(files)) {
+    mounted[`/${name}`] = content
+  }
+
+  const entry = entryFileOf(files)
+
+  if (entry && !ENTRY_CANDIDATES.slice(0, 2).includes(entry)) {
+    const withoutExtension = entry.replace(/\.[^.]+$/, '')
+    mounted['/App.js'] = `export { default } from './${withoutExtension}'\n`
+  }
+
+  return mounted
 }
 
 /** Convierte el Markdown del README en un File .md listo para subir. */
 export function readmeToFile(markdown: string): File {
   return new File([markdown], 'README.md', { type: 'text/markdown' })
-}
-
-/**
- * Extrae el texto del primer archivo de un ZIP con método STORE (el que produce
- * `zipTextFile`). Sirve para recuperar el código de un componente guardado y
- * previsualizarlo. No soporta DEFLATE: para zips comprimidos externos lanza.
- */
-export function unzipFirstTextFile(buffer: ArrayBuffer): string {
-  const view = new DataView(buffer)
-  // Firma del local file header.
-  if (buffer.byteLength < 30 || view.getUint32(0, true) !== 0x04034b50) {
-    throw new Error('No es un ZIP válido.')
-  }
-  const method = view.getUint16(8, true)
-  if (method !== 0) {
-    throw new Error('Solo se admite ZIP sin compresión (STORE).')
-  }
-  const compressedSize = view.getUint32(18, true)
-  const nameLength = view.getUint16(26, true)
-  const extraLength = view.getUint16(28, true)
-  const dataStart = 30 + nameLength + extraLength
-  const bytes = new Uint8Array(buffer, dataStart, compressedSize)
-  return new TextDecoder().decode(bytes)
 }

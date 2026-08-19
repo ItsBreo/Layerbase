@@ -34,7 +34,7 @@ import {
   useReadmeText,
   useUnpublishComponent,
 } from '@/studio/hooks'
-import { codeToSourceFile, readmeToFile } from '@/studio/zip'
+import { defaultFilesFor, filesToSourceFile, readmeToFile, type ComponentFiles } from '@/studio/zip'
 import { STACKS, type Stack } from '@/studio/types'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -57,7 +57,8 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
   const { data: existing, isLoading: loadingExisting } = useComponent(mode === 'edit' ? slug : undefined)
   const unpublish = useUnpublishComponent()
 
-  const [code, setCode] = useState('')
+  // Mapa nombre → contenido. Un componente puede tener varios ficheros.
+  const [code, setCode] = useState<ComponentFiles>({})
   const [readme, setReadme] = useState('')
   // Imagen de portada opcional: si el autor no la sube, la ficha renderiza el
   // componente en vivo en el sandbox.
@@ -138,16 +139,26 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
     setCode(savedCode.data)
   }, [savedCode.data])
 
+  // En creación se arranca con el esqueleto del stack elegido, para que el
+  // editor no salga en blanco sin saber qué se espera escribir ahí.
+  useEffect(() => {
+    if (mode !== 'create' || codeTouched.current || Object.keys(code).length > 0) return
+    setCode(defaultFilesFor(stack))
+  }, [mode, stack, code])
+
   useEffect(() => {
     if (readmeHydrated.current || readmeTouched.current || savedReadme.data === undefined) return
     readmeHydrated.current = true
     setReadme(savedReadme.data)
   }, [savedReadme.data])
 
-  const handleCodeChange = (value: string) => {
+  const handleCodeChange = (value: ComponentFiles) => {
     codeTouched.current = true
     setCode(value)
   }
+
+  /** ¿Hay algo escrito? Un mapa de ficheros todos vacíos no cuenta. */
+  const hasCode = Object.values(code).some((content) => content.trim() !== '')
 
   const handleReadmeChange = (value: string) => {
     readmeTouched.current = true
@@ -186,8 +197,8 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
        * alguna descarga falló al abrir el formulario, guardar no destruye nada
        * (ver la hidratación, arriba). No conviertas esto en un `else` que borre.
        */
-      if (code.trim()) {
-        await componentsApi.uploadFile(component.slug, codeToSourceFile(code, values.stack), 'source')
+      if (hasCode) {
+        await componentsApi.uploadFile(component.slug, filesToSourceFile(code), 'source')
       }
       if (readme.trim()) {
         await componentsApi.uploadFile(component.slug, readmeToFile(readme), 'readme')
@@ -356,9 +367,8 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
             {savedCode.isLoading && <LoadingNotice text={t('studio.form.loadingCode')} />}
             {savedCode.isError && <FailedNotice text={t('studio.form.codeLoadFailed')} />}
             <CodeEditor
-              value={code}
+              files={code}
               onChange={handleCodeChange}
-              stack={stack}
               label={t('studio.form.codeLabel')}
               hint={t('studio.form.codeHint')}
             />
@@ -390,12 +400,12 @@ export default function ComponentForm({ mode }: { mode: 'create' | 'edit' }) {
             <Button type="button" variant="ghost" onClick={() => navigate('/studio')}>
               {t('studio.form.cancel')}
             </Button>
-            {stack === 'react' && code.trim() !== '' && (
+            {stack === 'react' && hasCode && (
               <Button
                 type="button"
                 variant="secondary"
                 icon={<Eye className="size-4" />}
-                onClick={() => navigate('/studio/preview', { state: { code, stack } })}
+                onClick={() => navigate('/studio/preview', { state: { files: code, stack } })}
               >
                 {t('studio.actions.preview')}
               </Button>

@@ -31,6 +31,7 @@ import { ComponentSandbox } from '@/studio/ComponentSandbox'
 import { useComponent, usePreviewCode } from '@/studio/hooks'
 import { componentGradient } from '@/studio/placeholder'
 import { Reviews } from '@/studio/Reviews'
+import type { ComponentFiles } from '@/studio/zip'
 import type { Component } from '@/studio/types'
 
 export default function ComponentDetail() {
@@ -157,7 +158,7 @@ export default function ComponentDetail() {
             image={coverImage}
             live={
               canRenderLive
-                ? { code: liveCode.data, loading: liveCode.isLoading, failed: liveCode.isError }
+                ? { files: liveCode.data, loading: liveCode.isLoading, failed: liveCode.isError }
                 : null
             }
           />
@@ -213,7 +214,7 @@ function Cover({
 }: {
   component: Component
   image: string | null
-  live: { code?: string; loading: boolean; failed: boolean } | null
+  live: { files?: ComponentFiles; loading: boolean; failed: boolean } | null
 }) {
   const { t } = useI18n()
 
@@ -229,12 +230,12 @@ function Cover({
     return (
       <div>
         <div className="overflow-hidden rounded-lg border border-border">
-          {live.loading || !live.code ? (
+          {live.loading || !live.files ? (
             <div className="flex aspect-[16/9] items-center justify-center bg-surface">
               <Loader2 className="size-6 animate-spin text-muted" />
             </div>
           ) : (
-            <ComponentSandbox code={live.code} />
+            <ComponentSandbox files={live.files} />
           )}
         </div>
         <p className="mt-2 font-mono text-xs uppercase tracking-[0.2em] text-muted">

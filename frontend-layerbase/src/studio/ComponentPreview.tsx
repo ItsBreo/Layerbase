@@ -16,17 +16,16 @@ import { AppShell } from '@/components/AppShell'
 import { useI18n } from '@/i18n/useI18n'
 import { ComponentSandbox } from '@/studio/ComponentSandbox'
 import { useComponent, usePreviewCode } from '@/studio/hooks'
+import { defaultFilesFor, type ComponentFiles } from '@/studio/zip'
 import type { Stack } from '@/studio/types'
 
 interface PreviewState {
-  code?: string
+  files?: ComponentFiles
   stack?: Stack
 }
 
-const DEFAULT_CODE = `export default function App() {
-  return <div style={{ padding: 24 }}>Tu componente aquí</div>
-}
-`
+/** Relleno del playground suelto (`/studio/preview`, sin componente). */
+const DEFAULT_FILES: ComponentFiles = defaultFilesFor('react')
 
 export default function ComponentPreview() {
   const { t } = useI18n()
@@ -40,8 +39,9 @@ export default function ComponentPreview() {
 
   // Código del componente guardado, por el mismo camino que usa la ficha
   // pública. Solo se pide si NO hay código en el state (borrador sin guardar).
-  const draftCode = state.code?.trim()
-  const savedSource = usePreviewCode(slug, !draftCode && component?.has_source === true)
+  // Borrador sin guardar, llegado por el state del router.
+  const draftFiles = Object.keys(state.files ?? {}).length > 0 ? state.files : undefined
+  const savedSource = usePreviewCode(slug, !draftFiles && component?.has_source === true)
 
   const stack: Stack = state.stack ?? component?.stack ?? 'react'
 
@@ -52,11 +52,11 @@ export default function ComponentPreview() {
    * instante después. Ese parpadeo parecía que el componente estaba vacío.
    */
   const isLoadingCode =
-    !draftCode && !!slug && (loadingComponent || (savedSource.isLoading && component?.has_source === true))
+    !draftFiles && !!slug && (loadingComponent || (savedSource.isLoading && component?.has_source === true))
 
   // Un fallo al descargar no puede disfrazarse de componente vacío: se avisa.
-  const loadFailed = !draftCode && savedSource.isError
-  const code = draftCode || savedSource.data || DEFAULT_CODE
+  const loadFailed = !draftFiles && savedSource.isError
+  const files = draftFiles ?? savedSource.data ?? DEFAULT_FILES
 
   return (
     <AppShell>
@@ -96,7 +96,7 @@ export default function ComponentPreview() {
               </div>
             )}
             <div className="mt-8 overflow-hidden rounded-lg border border-border">
-              <ComponentSandbox code={code} withEditor height={480} />
+              <ComponentSandbox files={files} withEditor height={480} />
             </div>
           </>
         )}
