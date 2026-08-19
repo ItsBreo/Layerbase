@@ -35,6 +35,8 @@
 | — | `components_count` de categorías y etiquetas valía 0: nadie lo escribía | sesión B |
 | — | Reviews: no existían (tabla, endpoints, moderación y UI) | sesión C |
 | — | `rating_avg` y `rating_count` no los escribía nadie | sesión C |
+| — | Correo real en desarrollo (Mailpit) | sesión D |
+| — | Notificaciones in-app: los 3 `TODO` de moderación, cerrados | sesión E |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 
