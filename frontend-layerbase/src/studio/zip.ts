@@ -92,17 +92,28 @@ export function unzipFiles(buffer: ArrayBuffer): ComponentFiles {
   return files
 }
 
+/** Fichero tal y como lo monta Sandpack (permite ocultarlo del explorador). */
+type SandpackFile = string | { code: string; hidden: boolean }
+
 /**
  * Traduce los ficheros al mapa que espera Sandpack.
  *
- * La plantilla `react` de Sandpack arranca importando `./App` desde su
- * `index.js`, así que SIEMPRE tiene que existir un `/App.js`. Cuando el punto
- * de entrada se llama de otra forma —`component.jsx` en los componentes
- * antiguos— no se renombra: se añade un `/App.js` que reexporta el original.
- * Renombrarlo rompería los imports relativos entre ficheros del propio autor.
+ * La plantilla `react` trae SU PROPIO `/App.js`, y los ficheros que se le pasan
+ * se FUSIONAN con los suyos en vez de sustituirlos. Su `index.js` arranca
+ * importando `./App`, así que si el componente se llama `App.jsx` la resolución
+ * se queda con el `App.js` de la plantilla y se renderiza su "Hello World" en
+ * lugar del componente del autor.
+ *
+ * Por eso se genera SIEMPRE un `/App.js` puente salvo que la entrada ya se
+ * llame exactamente así. El puente reexporta la entrada **con su extensión**:
+ * escribir `'./App'` desde dentro de `/App.js` se resolvería a sí mismo.
+ *
+ * No se renombra la entrada porque eso rompería los imports relativos entre los
+ * ficheros del propio autor. Y el puente va `hidden`: es un apaño de la
+ * plantilla, no un fichero del componente, y en el explorador solo confundiría.
  */
-export function toSandpackFiles(files: ComponentFiles): Record<string, string> {
-  const mounted: Record<string, string> = {}
+export function toSandpackFiles(files: ComponentFiles): Record<string, SandpackFile> {
+  const mounted: Record<string, SandpackFile> = {}
 
   for (const [name, content] of Object.entries(files)) {
     mounted[`/${name}`] = content
@@ -110,9 +121,11 @@ export function toSandpackFiles(files: ComponentFiles): Record<string, string> {
 
   const entry = entryFileOf(files)
 
-  if (entry && !ENTRY_CANDIDATES.slice(0, 2).includes(entry)) {
-    const withoutExtension = entry.replace(/\.[^.]+$/, '')
-    mounted['/App.js'] = `export { default } from './${withoutExtension}'\n`
+  if (entry && entry !== 'App.js') {
+    mounted['/App.js'] = {
+      code: `export { default } from './${entry}'\n`,
+      hidden: true,
+    }
   }
 
   return mounted
