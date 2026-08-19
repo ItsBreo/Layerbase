@@ -37,7 +37,14 @@ class UserManagementTest extends TestCase
 
     public function test_an_admin_lists_users_and_can_search_them(): void
     {
-        $admin = User::factory()->admin()->create();
+        // Nombre y email explícitos, no los de Faker: con datos aleatorios el
+        // admin podía contener por casualidad el término buscado y hacer fallar
+        // la búsqueda una vez de cada tantas. Un test que falla al azar es peor
+        // que no tenerlo.
+        $admin = User::factory()->admin()->create([
+            'name' => 'Quien administra',
+            'email' => 'admin@test.com',
+        ]);
         User::factory()->create(['name' => 'Ada Lovelace', 'email' => 'ada@test.com']);
         User::factory()->create(['name' => 'Grace Hopper', 'email' => 'grace@test.com']);
 

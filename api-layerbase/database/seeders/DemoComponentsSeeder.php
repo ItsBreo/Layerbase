@@ -70,8 +70,6 @@ class DemoComponentsSeeder extends Seeder
             $price = $isFree ? 0 : [4.99, 7.5, 9.99, 12, 14.99, 19.99, 24][array_rand([4.99, 7.5, 9.99, 12, 14.99, 19.99, 24])];
 
             $publishedAt = now()->subDays(random_int(0, 60))->subHours(random_int(0, 23));
-            $ratingCount = random_int(0, 240);
-            $ratingAvg = $ratingCount > 0 ? round(random_int(30, 50) / 10, 2) : null;
 
             $component = Component::updateOrCreate(
                 ['slug' => Str::slug($title)],
@@ -89,8 +87,19 @@ class DemoComponentsSeeder extends Seeder
             $component->status = ComponentStatus::Published;
             $component->published_at = $publishedAt;
             $component->downloads = random_int(0, 5000);
-            $component->rating_count = $ratingCount;
-            $component->rating_avg = $ratingAvg;
+            /*
+             * NO se inventa la valoración.
+             *
+             * Antes se generaban `rating_avg` y `rating_count` al azar, y el
+             * resultado era incoherente en pantalla: la tarjeta enseñaba 4,2
+             * estrellas y al abrir la ficha ponía "nadie ha valorado este
+             * componente". Ahora esas dos columnas SOLO las escribe
+             * ReviewObserver a partir de valoraciones reales.
+             *
+             * `downloads` sí se puede inventar: no hay ninguna vista que liste
+             * las descargas una a una, así que el número no se contradice con
+             * nada.
+             */
             $component->save();
 
             // 1-4 tags aleatorios.
