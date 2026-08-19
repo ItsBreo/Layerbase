@@ -27,6 +27,8 @@
 | 3.3 | Recursos del footer: las tres páginas, escritas | bloque 7 |
 | — | Sin CI: nada ejecutaba la suite automáticamente | bloque 6 |
 | — | 3 errores + 2 avisos de ESLint | bloque 6 |
+| — | La URL firmada apuntaba al host interno de Docker: descargas y preview rotos en el navegador | bloque 7 |
+| — | El formulario de edición nunca cargaba el código ni el README guardados | bloque 7 |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 
