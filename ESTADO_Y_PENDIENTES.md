@@ -1,11 +1,14 @@
 # Layerbase — estado, vulnerabilidades y pendientes
 
 > Auditoría inicial del 2026-08-16 sobre `feature/panel-admin-moderacion` (commit
-> `99d593b`), con 66 tests. **Vivo: última actualización 2026-08-19, 179 tests en
+> `99d593b`), con 66 tests. **Vivo: última actualización 2026-08-22, 183 tests en
 > verde.** Se revisa código real, no documentación.
 >
 > Orden de trabajo acordado: **funcional primero, estética después**. El módulo de
 > suscripciones va **al final** de todo, y la pantalla de preferencias justo antes.
+>
+> **Proveedor de despliegue: AWS** (decidido el 2026-08-22, cuenta nueva con capa
+> gratuita de 12 meses). Sustituye al plan anterior de Cloud Run + Cloudflare.
 >
 > Cómo leerlo: la sección **0** es lo cerrado, la **6** es lo que queda repartido
 > por sesiones. Las secciones 1-5 son el detalle del hallazgo original y se dejan
@@ -46,6 +49,13 @@
 | 4.x | Búsqueda: `LIKE '%…%'` sustituido por texto completo de PostgreSQL | sesión G |
 | — | La suite corría en SQLite y no en el motor real | sesión G |
 | — | Las búsquedas por nombre distinguían mayúsculas en producción (`LIKE` vs `ILIKE`) | sesión G |
+| — | 19 avisos de `composer audit`, uno **crítico** (`jmespath`, inyección de código) | sesión I.1 |
+| — | 6 vulnerabilidades de npm, 3 altas, en `react-router` (open redirect y DoS) | sesión I.1 |
+| — | **`upload_max_filesize` valía 2M**: las subidas de 2-5 MB fallaban con un error que no lo explicaba | sesión I.2 |
+| — | No había imagen desplegable: PHP-FPM y Nginx separados, código por volumen, `migrate \|\| true` | sesión I.2 |
+| — | El avatar recortaba la URL SIEMPRE: en almacenamiento remoto perdía el dominio | sesión I.3 |
+| — | `oauthRedirectUrl()` tenía `/api` a fuego, y es una navegación del navegador, no axios | sesión I.4 |
+| — | Sin fallback de SPA: recargar una ruta interna daría 404 desplegado | sesión I.4 |
 
 **Las vulnerabilidades están todas cerradas.** El resto sigue abierto.
 
@@ -290,18 +300,24 @@ nota explica por qué existía el hueco.*
   falta el job con Chromium headless.
 - ~~**3 errores de ESLint preexistentes**~~ en `src/auth/`: resueltos en el bloque 6.
   `npm run lint` sale limpio.
-- **Bundle de 1,4 MB** sin code splitting.
+- **Bundle de 1,59 MB** (511 kB comprimido) sin code splitting. Monaco y Sandpack
+  ya van en rutas aparte; lo gordo está en el chunk principal.
+- **Monaco se descarga de un CDN de terceros en tiempo de ejecución.**
+  `@monaco-editor/react` va sin configurar el loader, así que tira de
+  `cdn.jsdelivr.net/npm/monaco-editor@0.55.1` — una versión distinta de la del
+  lockfile, que no llega a usarse. Si jsDelivr cae o está bloqueado, el autor no
+  puede escribir código. Es también la razón de que los 2 avisos de `dompurify`
+  no se puedan cerrar con npm. Se arregla self-hosteando Monaco, y encaja con el
+  code splitting de arriba.
 - **`.gitignore` esconde toda la documentación del proyecto:** `CLAUDE.md` (línea 2) y
   `/documents` (línea 3). Nada de lo que vive ahí se comparte con el equipo ni existe fuera
   de tu máquina — incluidos el modelo de datos, la hoja de ruta y el design system. Por eso
   este fichero está en la **raíz** y no en `documents/`. Merece una decisión consciente: si
   se ignoró `/documents` por el peso de los `.docx` y `.html`, se puede ignorar por
   extensión y dejar el Markdown dentro.
-- **19 avisos de seguridad en dependencias** (`composer audit`), uno de severidad
-  **alta**: `guzzlehttp/guzzle`, `guzzlehttp/psr7`, `league/commonmark`,
-  `mtdowling/jmespath.php` y `phpseclib/phpseclib`. Son transitivas (ninguna se pide
-  directamente) y el arreglo es un `composer update` de esos cinco paquetes, pero
-  conviene hacerlo con la suite delante y **antes de desplegar**.
+- ~~**19 avisos de seguridad en dependencias**~~ (`composer audit`). Resueltos en
+  la sesión I.1, junto con 6 de npm que nadie había mirado. `composer audit` sale
+  limpio; `npm audit` deja 2 que no dependen de nosotros (ver Monaco, arriba).
 - ~~**Sin CI.**~~ Resuelto: `.github/workflows/ci.yml` corre Pint + la suite (contra
   PostgreSQL) y ESLint + build del frontend.
 - ~~**La suite corría en SQLite**~~ mientras producción va en PostgreSQL. Resuelto en la
@@ -319,12 +335,19 @@ de lo que queda ya no es ese, es el acordado el 2026-08-19:**
 
 | Orden | Sesión | Estado |
 | --- | --- | --- |
-| 1 | **I — Despliegue de preproducción** | 🔵 siguiente |
-| 2 | **J — Paso a producción** | 🔴 después |
+| 1 | **I.1 — Dependencias al día** | ✅ 2026-08-22 |
+| 2 | **I.2 — Imagen de producción** | ✅ 2026-08-22 |
+| 3 | **I.3 — Almacenamiento en S3** | ✅ 2026-08-22 (código; faltan los buckets) |
+| 4 | **I.4 — El frontend apunta a la API** | ✅ 2026-08-22 |
+| 5 | **I.5 — Desplegar** | 🔵 **siguiente — bloqueada en ti**, ver abajo |
+| 6 | **J — Paso a producción** | 🔴 después |
 | — | Vincular cuentas desde el perfil | 🔴 sin fecha, no bloquea |
-| 3 | **K+ — Compras / Stripe** — solo pago único a precio fijo | ⏸ **últimas fases, por decisión propia** |
-| 4 | **Pantalla de preferencias** | ⏸ **últimas fases, por decisión propia** |
-| 5 | **Suscripciones** (plan Pro/Team de la plataforma, no venta de componentes) | ⏸ al final de todo |
+| 7 | **K+ — Compras / Stripe** — solo pago único a precio fijo | ⏸ **últimas fases, por decisión propia** |
+| 8 | **Pantalla de preferencias** | ⏸ **últimas fases, por decisión propia** |
+| 9 | **Suscripciones** (plan Pro/Team de la plataforma, no venta de componentes) | ⏸ al final de todo |
+
+**La beta cerrada termina al acabar I.5.** Todo lo que va después (dominio,
+legales, Stripe) queda fuera por decisión propia.
 
 ---
 
@@ -515,71 +538,131 @@ y `TagController`. El test que existía pasaba porque el término casaba con el
 
 ### Sesión I — Despliegue de PREPRODUCCIÓN
 
-*Varias sesiones. Auditado el 2026-08-19 sobre el código real.*
+*Auditada el 2026-08-19 sobre código real, dividida en cinco y ejecutada el
+2026-08-22. **Proveedor: AWS**, decidido ese mismo día.*
 
-Objetivo: que esto **esté en una URL y se pueda entrar**, gratis, con datos de
-prueba. Frontend en Cloudflare Pages o Vercel, backend en Cloud Run. Proyecto de
-GCP ya creado ("Layerbase beta"); `gcloud` instalado en local (SDK 581), **sin
-autenticar todavía**.
+Objetivo: que esto esté en una URL y se pueda entrar, con datos de prueba.
+Runbook completo con los comandos en
+[`docker/production/DESPLIEGUE.md`](docker/production/DESPLIEGUE.md).
 
 Lo que **no** hace falta aquí: dominio propio, correo transaccional (la
 verificación de email es automática desde el 2026-08-19), texto legal redactado
 —mientras sea beta cerrada y no se cobre—, ni Stripe.
 
-#### Bloqueantes de código — sin esto no funciona desplegado
+#### El cambio de proveedor
 
-1. **El frontend tiene la URL de la API a fuego.** `src/lib/api.ts` usa
-   `baseURL: '/api'`, que en local funciona porque lo proxya Vite. En Vercel el
-   SPA es HTML estático: `/api` pegaría contra el dominio del frontend. Salida:
-   una `VITE_API_URL`, o un `vercel.json` con rewrites (esto último mantiene
-   mismo origen y ahorra CORS entero). **No existe `vercel.json`.**
-2. **Los ficheros siguen en disco local** (`COMPONENTS_FILES_DISK=local`). Cloud
-   Run tiene disco efímero: lo subido desaparece al escalar o reciclar.
-3. **Los avatares, igual y por partida doble.** Disco `public`
-   (`config/profile.php`) con URL **relativa** `/storage/...`: disco efímero, y
-   además esa URL se resolvería contra el dominio del frontend, donde no hay
-   nada.
-4. **La imagen no sirve para Cloud Run.** Hoy son PHP-FPM y Nginx en
-   contenedores separados hablando por red interna; Cloud Run corre **uno solo**
-   escuchando en `$PORT`.
+El plan original era Cloud Run + Cloudflare Pages + Neon + R2. Se cambió a AWS
+al aparecer una cuenta nueva con capa gratuita de 12 meses. **Nada del código
+hubo que rehacerlo**: la imagen escucha en `$PORT` y los discos `s3`/`s3_public`
+*son* el driver de S3, del que R2 solo era el sustituto compatible.
 
-#### Lo que NO es un problema (comprobado, contra lo que se dijo antes)
+Lo que sí cambia, y conviene tener apuntado:
 
-- **El `state` de OAuth en cache sí sobrevive a varias instancias:**
-  `CACHE_STORE=database`, no `file`.
-- **No hace falta worker de colas:** ninguna clase implementa `ShouldQueue` y
-  las notificaciones van por canal `database`. El correo se manda síncrono, que
-  ralentiza la respuesta pero funciona.
-- **CORS ya está parametrizado por entorno** (`CORS_ALLOWED_ORIGINS`), sin `*`
-  con credenciales.
+- **App Runner no baja a cero** cuando no hay tráfico, y Cloud Run sí. Son unos
+  5-8 $/mes aunque no entre nadie.
+- **La capa gratuita de AWS dura 12 meses**, no siempre. Hay un escalón al año,
+  sobre todo en RDS (~15-25 $/mes después).
+- **RDS va con acceso público**, igual que iba a ir Neon. No es un empeoramiento:
+  ponerla en privado obligaría a un conector de VPC, y entonces TODA la salida
+  de App Runner iría por la VPC —incluidas las llamadas a GitHub y Google del
+  login OAuth—, lo que exige un NAT Gateway de unos 32 $/mes.
+- `public/_redirects` **no sirve en CloudFront**: allí la misma regla es una
+  *custom error response*. El fichero se queda porque no estorba.
 
-#### Configuración a rellenar
+#### I.1 — Dependencias al día ✅
 
-- `APP_DEBUG=false`, `APP_ENV=production`, `CORS_ALLOWED_ORIGINS`.
-- **`ADMIN_EMAIL` / `ADMIN_PASSWORD` vacíos** en `.env.example`: despliegas,
-  migras y te quedas sin ningún admin.
-- Región: `europe-southwest1` (Madrid) o `europe-west1`.
+`composer audit` daba 19 avisos sobre 5 paquetes, y no "uno alto" como decía la
+auditoría: **uno crítico** (`mtdowling/jmespath.php`, CVE-2026-54133, inyección
+de código), 5 altos y 13 medios. Entra por el SDK de AWS, así que se activaba
+justo al empezar I.3. Cerrado con un `composer update` de los cinco.
 
-#### Servicios gratuitos evaluados
+**El frontend no se había auditado nunca:** 6 vulnerabilidades, 3 altas, todas
+en `react-router` ≤ 7.17.0 — open redirect en `<Link>`/`useNavigate`, XSS y DoS
+por *route matching*. Resueltas subiendo a 7.18.2.
 
-| Pieza | Elegido | Alternativas |
-| --- | --- | --- |
-| Frontend | Cloudflare Pages | Vercel (Hobby es **solo no comercial**: choca con Stripe), Netlify |
-| Backend | Cloud Run | Oracle Cloud Always Free (una VM, `docker compose` tal cual) |
-| PostgreSQL | Neon o Supabase | Cloud SQL **no tiene free tier** |
-| Ficheros | Cloudflare R2 | Supabase Storage, GCS |
+Quedan 2 avisos (1 bajo, 1 medio) en `dompurify`, que entra por `monaco-editor`.
+**No se pueden cerrar con npm y forzarlo sería un placebo**, porque ese paquete
+nunca llega al navegador: `@monaco-editor/react` va sin configurar el loader, y
+por defecto **descarga Monaco de jsDelivr en tiempo de ejecución**
+(`monaco-editor@0.55.1`, una versión distinta de la del lockfile). El editor de
+código depende hoy de un CDN de terceros: si jsDelivr cae o está bloqueado, el
+autor no puede escribir. Se cierra self-hosteando Monaco, que encaja con el code
+splitting pendiente.
 
-**Requisito duro sobre la base de datos:** desde la sesión G el backend exige
-`CREATE EXTENSION unaccent` y `pg_trgm`. Si el proveedor no lo permite, la
-migración falla al arrancar. Confirmarlo **antes** de elegir.
+#### I.2 — Imagen de producción ✅
 
-#### Depende de terceros, no del código
+`docker/php/Dockerfile` no valía: PHP-FPM a secas esperando un Nginx en otro
+contenedor, código por volumen, `composer install` en cada arranque y un
+`migrate --force || true` que deja arrancar con la base a medio migrar.
 
-- **Facturación vinculada al proyecto de GCP.** Un proyecto nuevo **no la
-  hereda**. Cloud Run la exige aunque solo se use el free tier.
-- **Habilitar Cloud Run Admin API y Artifact Registry API.**
-- Crear las cuentas de la base de datos y del almacenamiento (verificación por
-  email). Las claves las mete el dueño en su `.env`; no pasan por el chat.
+Nueva imagen en `docker/production/`: multi-etapa sobre una base común, Nginx +
+PHP-FPM + Supervisor en un solo contenedor, escuchando en `$PORT`, sin `.env` ni
+tests ni Composer dentro, y **fallando en voz alta** — si falta `APP_KEY` o la
+configuración de base de datos, no arranca (probado: sale con código 1).
+
+**Dos cosas que salieron por el camino:**
+
+- **`upload_max_filesize` valía 2M** (el valor compilado de PHP, sin `php.ini`),
+  cuando `UploadComponentFileRequest::MAX_KB` valida 5 MB. Una subida de entre 2
+  y 5 MB la cortaba PHP antes de llegar a Laravel: `$_FILES` llega vacío y el
+  autor ve "el archivo es obligatorio" en vez de "pesa demasiado". Y el avatar,
+  con su máximo de 2 MB, caía justo en el límite. Arreglado con
+  `docker/php/php.ini`, que **comparten desarrollo y producción**.
+- **El proyecto corre PHP 8.4, no 8.3.** El lock exige `>=8.4.1` desde antes de
+  esta sesión (Symfony 8.1), el contenedor de desarrollo llevaba 8.4.22, pero el
+  Dockerfile decía `php:8.3-fpm`, `composer.json` declaraba `^8.3` y **CI
+  declaraba 8.3 y hacía `composer install` sin `--ignore-platform-reqs`: el job
+  de backend no podía estar pasando.** Alineado todo en 8.4.
+
+#### I.3 — Almacenamiento en S3 ✅ (código)
+
+Dos discos, no uno: **`s3` privado** para los archivos de componente (URL
+firmada temporal) y **`s3_public`** para los avatares (URL permanente).
+
+Son **dos buckets distintos a propósito**. El avatar necesita URL permanente, y
+eso obliga a exponer el bucket entero; si compartiera bucket con los archivos de
+componente, ese dominio público serviría el código fuente de los de pago sin
+pasar por la policy — la vulnerabilidad 1.3 por otra vía.
+
+`ComponentFile` ya distinguía disco local de remoto. **`AvatarService` no:**
+recortaba la URL a la ruta siempre, así que en S3 se comía el dominio del bucket
+y el avatar acababa apuntando al dominio del FRONTEND. Arreglado con la misma
+regla, y el borrado del avatar anterior ya no deduce la ruta partiendo la URL
+—que se rompía en modo *path-style*— sino buscando el patrón `avatars/{id}/`.
+
+En los discos remotos `throw` pasa a `true`: una subida fallida en silencio
+dejaría una fila en `component_files` apuntando a un archivo inexistente.
+
+Frontera en `tests/Feature/Profile/AvatarStorageTest.php` (4 casos).
+
+#### I.4 — El frontend apunta a la API ✅
+
+`VITE_API_URL` (variable de **build**: Vite la incrusta al compilar) con `/api`
+relativo como valor por defecto, así el proxy de Vite en local sigue igual.
+
+**La auditoría solo señalaba `src/lib/api.ts`, y había un segundo sitio:**
+`oauthRedirectUrl()` en `src/Login/auth.ts` devolvía `/api/auth/...` a fuego. Ese
+no pasa por axios — es un `window.location.assign`, una navegación completa del
+navegador —, así que el `baseURL` no le afectaba y el login con GitHub y Google
+habría roto desplegado. Ahora ambos salen de `API_BASE_URL`.
+
+Añadidos `frontend-layerbase/.env.example` y el fallback de SPA.
+
+#### I.5 — Desplegar 🔵 **bloqueada en ti**
+
+Todo lo que depende del código está hecho. Lo que falta son altas que llevan
+tarjeta o verificación por correo:
+
+- [ ] `brew install awscli` y `aws configure` (no está instalado)
+- [ ] Usuario IAM para el despliegue (no la cuenta raíz)
+- [ ] Los dos buckets de S3 y un usuario IAM para la aplicación
+- [ ] La instancia de RDS
+- [ ] El repositorio de ECR y el servicio de App Runner
+- [ ] El bucket del frontend y la distribución de CloudFront
+
+Comandos exactos en
+[`docker/production/DESPLIEGUE.md`](docker/production/DESPLIEGUE.md), con la
+lista de comprobación final.
 
 ---
 
@@ -598,11 +681,12 @@ falta para que entre gente que no eres tú y, llegado el caso, dinero.
   `User::markEmailAsVerifiedOnSignIn()` (ver el cambio de 1.1 en la sección 0).
 - **Texto legal redactado.** Las cuatro páginas están montadas y el propio aviso
   dice "no debe publicarse en este estado". No depende del código.
-- **`composer audit`**: 19 avisos, uno alto. `composer update` de los cinco
-  paquetes con la suite delante.
-- **Hosting del frontend**: el plan Hobby de Vercel es **solo para proyectos no
-  comerciales**. En cuanto se cobre de verdad hay que estar en Cloudflare Pages o
-  en un plan de pago.
+- ~~**`composer audit`**~~: hecho en la sesión I.1.
+- **El escalón de la capa gratuita de AWS a los 12 meses**, sobre todo RDS
+  (~15-25 $/mes después). Decidir entonces si se sigue en AWS o se mueve.
+- **Hosting del frontend**: S3 + CloudFront no tiene restricción de uso
+  comercial, así que el problema que había con el plan Hobby de Vercel ya no
+  aplica. La capa gratuita de 1 TB/mes de CloudFront es perpetua.
 - **Copias de seguridad y monitorización.** Hoy no hay ninguna de las dos.
 - Repasar `APP_DEBUG=false`, límites de subida y throttling con tráfico real.
 

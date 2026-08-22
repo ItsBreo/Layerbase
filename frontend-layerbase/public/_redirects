@@ -1,0 +1,12 @@
+# SPA: cualquier ruta que no sea un fichero real la resuelve React Router.
+#
+# Sin esto, entrar directo a /components/mi-componente o recargar la página
+# devuelve 404: en el bucket solo existe index.html como fichero. El 200 es lo
+# que hace que sea una reescritura interna y no una redirección.
+#
+# OJO: este formato lo entienden Cloudflare Pages y Netlify, NO CloudFront.
+# Desplegando en S3 + CloudFront la misma regla se configura como "custom error
+# response" de la distribución (403 y 404 -> /index.html con código 200). Ver
+# docker/production/DESPLIEGUE.md. El fichero se queda porque no estorba y deja
+# la puerta abierta a servir el front desde Pages sin tocar nada.
+/*    /index.html   200

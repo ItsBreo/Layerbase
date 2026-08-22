@@ -18,6 +18,11 @@ return [
     | código de los componentes de pago saltándose la autorización.
     | ComponentFile::temporaryUrl() lanza excepción si el disco no las soporta.
     |
+    | Tampoco vale 's3_public': ese es el bucket público de los avatares. El
+    | disco correcto desplegado es 's3', el bucket privado. Son dos buckets
+    | distintos justamente para que el dominio público no llegue nunca al
+    | código fuente.
+    |
     */
     'files_disk' => env('COMPONENTS_FILES_DISK', env('FILESYSTEM_DISK', 'local')),
 

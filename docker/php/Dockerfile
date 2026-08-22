@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.4-fpm
 
 # Argumentos para alinear el usuario del contenedor con el del host (evita
 # problemas de permisos en los volúmenes montados, sobre todo en Linux).
@@ -35,6 +35,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         opcache \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Límites de PHP. Mismo fichero que usa la imagen de producción: el límite de
+# subida por defecto (2M) es menor que los 5 MB que valida la aplicación, y sin
+# esto una subida de 3 MB falla en local igual que fallaría desplegada.
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-layerbase.ini
 
 # Composer (copiado desde la imagen oficial).
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

@@ -3,7 +3,7 @@
  * `/api/auth`. Los componentes y el AuthContext consumen estas funciones, no
  * axios directamente, para mantener el contrato en un solo sitio.
  */
-import { api } from '@/lib/api'
+import { API_BASE_URL, api } from '@/lib/api'
 import type {
   AuthTokenResponse,
   LoginCredentials,
@@ -90,7 +90,12 @@ export const authApi = {
     return data
   },
 
+  /**
+   * URL a la que se NAVEGA (no se pide por axios) para iniciar el flujo OAuth.
+   * Por eso usa `API_BASE_URL` en vez de una ruta relativa: desplegado, el SPA
+   * vive en otro dominio que el backend y `/api/...` llevaría al frontend.
+   */
   oauthRedirectUrl(provider: OAuthProvider): string {
-    return `/api/auth/${provider}/redirect`
+    return `${API_BASE_URL}/auth/${provider}/redirect`
   },
 }

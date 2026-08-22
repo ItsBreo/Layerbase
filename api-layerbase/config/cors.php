@@ -18,9 +18,14 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => array_filter(
+    // Se recorta cada elemento: una lista escrita como "https://a, https://b"
+    // dejaría el segundo origen con un espacio delante y no casaría con ninguna
+    // petición — un fallo de despliegue que solo se ve como un CORS bloqueado
+    // en la consola del navegador, sin nada en los logs del servidor.
+    'allowed_origins' => array_values(array_filter(array_map(
+        trim(...),
         explode(',', (string) env('CORS_ALLOWED_ORIGINS', (string) env('FRONTEND_URL', 'http://localhost:5173')))
-    ),
+    ))),
 
     'allowed_origins_patterns' => [],
 

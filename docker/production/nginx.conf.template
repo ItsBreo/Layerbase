@@ -1,0 +1,59 @@
+# -----------------------------------------------------------------------------
+# Nginx de producción — un solo contenedor, junto a PHP-FPM.
+#
+# Se procesa con `envsubst` en el arranque porque App Runner inyecta el puerto en
+# $PORT y no se conoce al construir la imagen. Las únicas variables sustituidas
+# son ${PORT} y ${NGINX_MAX_BODY}: cualquier otra `$var` de Nginx debe quedar
+# intacta, así que envsubst se llama con la lista explícita.
+# -----------------------------------------------------------------------------
+
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /var/www/html/public;
+    index index.php;
+
+    charset utf-8;
+
+    client_max_body_size ${NGINX_MAX_BODY};
+
+    # App Runner ya termina TLS por delante; el esquema real viene en la cabecera.
+    absolute_redirect off;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    # El health check de App Runner no merece una línea de log por sondeo.
+    location = /up {
+        access_log off;
+        try_files $uri /index.php?$query_string;
+    }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        # En producción PHP-FPM vive en el MISMO contenedor, no en otro servicio.
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param HTTPS $http_x_forwarded_proto;
+        include fastcgi_params;
+
+        fastcgi_read_timeout 60s;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+
+    # Los logs van a stdout/stderr: es de donde App Runner los recoge.
+    access_log /dev/stdout;
+    error_log /dev/stderr warn;
+}
