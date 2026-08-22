@@ -130,6 +130,30 @@ const OAUTH_PROVIDERS = [
   Icon: (props: { className?: string }) => ReactElement
 }>
 
+/**
+ * Proveedores que se muestran, vía `VITE_OAUTH_PROVIDERS` (lista separada por
+ * comas). Sin la variable salen todos, que es lo que interesa en local.
+ *
+ * Existe porque un proveedor mal configurado es peor que uno ausente: el botón
+ * invita a pulsarlo y lleva a un error del proveedor, no de la app, así que
+ * quien lo ve no entiende qué ha pasado ni puede hacer nada.
+ *
+ * Hoy Google está fuera en producción: publicar su app exige demostrar la
+ * propiedad del dominio, y `cloudfront.net` es de Amazon. Vuelve en cuanto haya
+ * dominio propio — basta con quitar la variable del build.
+ */
+const HABILITADOS = (() => {
+  const configurados: string = import.meta.env.VITE_OAUTH_PROVIDERS?.trim() ?? ''
+
+  if (configurados === '') {
+    return OAUTH_PROVIDERS
+  }
+
+  const permitidos = new Set(configurados.split(',').map((p: string) => p.trim()))
+
+  return OAUTH_PROVIDERS.filter(({ id }) => permitidos.has(id))
+})()
+
 export function OAuthButtons() {
   // `assign()` y no `location.href = ...`: es una navegación completa fuera de
   // la SPA (al proveedor OAuth), y asignar a una propiedad de un objeto externo
@@ -138,9 +162,15 @@ export function OAuthButtons() {
     window.location.assign(authApi.oauthRedirectUrl(provider))
   }
 
+  if (HABILITADOS.length === 0) {
+    return null
+  }
+
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {OAUTH_PROVIDERS.map(({ id, label, Icon }) => (
+    // Una sola columna cuando solo queda un proveedor: con `grid-cols-2` fijo,
+    // el botón se quedaba a media anchura y con un hueco al lado.
+    <div className={HABILITADOS.length === 1 ? 'grid gap-3' : 'grid grid-cols-2 gap-3'}>
+      {HABILITADOS.map(({ id, label, Icon }) => (
         <button
           key={id}
           type="button"
