@@ -283,3 +283,46 @@ formato lo entienden Cloudflare Pages y Netlify, no CloudFront.
 - [ ] Entrar directo a `/components/<slug>` y recargar no da 404
 - [ ] El admin del paso 4 puede entrar en `/admin` y aprobar
 - [ ] `APP_DEBUG=false`: una ruta inexistente no enseña traza
+
+---
+
+## Recursos reales creados (2026-08-22)
+
+Cuenta **126571941460**, región **eu-west-1**.
+
+| Recurso | Identificador |
+| --- | --- |
+| Usuario IAM de despliegue | `layerbase-deploy` |
+| Usuario IAM de la aplicación | `layerbase-app` (solo los dos buckets) |
+| Grupo de seguridad de la BD | `sg-0a650acbfbf3f2e77` |
+| Grupo de parámetros | `layerbase-pg16` con `rds.force_ssl=1` |
+| Instancia RDS | `layerbase`, PostgreSQL 16.15, `db.t4g.micro` |
+| Bucket privado (componentes) | `layerbase-files-bbd6033a` |
+| Bucket público (avatares) | `layerbase-avatars-bbd6033a` |
+| Bucket del frontend | `layerbase-web-bbd6033a` |
+| Distribución CloudFront | `EF7L4HC7EJPRG` → `d32o4lktjif33i.cloudfront.net` |
+| Repositorio ECR | `126571941460.dkr.ecr.eu-west-1.amazonaws.com/layerbase-api` |
+| Rol de acceso a ECR | `AppRunnerECRAccessRole` |
+| Rol de instancia | `LayerbaseAppRunnerInstanceRole` |
+| Presupuesto | `layerbase-mensual`, 25 $/mes con avisos |
+
+### Secretos
+
+Ninguno se ha escrito nunca fuera de AWS. Se generan y van directos a su sitio:
+
+| Secreto | Dónde |
+| --- | --- |
+| `APP_KEY` | Secrets Manager `layerbase/APP_KEY` |
+| Contraseña de la RDS | Secrets Manager `layerbase/DB_PASSWORD` |
+| Secreto de S3 | Secrets Manager `layerbase/AWS_SECRET_ACCESS_KEY` |
+| ID de clave de S3 | Parameter Store `/layerbase/AWS_ACCESS_KEY_ID` (no es secreto) |
+
+**`APP_KEY` no se cambia nunca:** invalida todo lo cifrado con ella.
+
+### Pendiente de afinar cuando la beta esté en pie
+
+- `layerbase-deploy` tiene `AdministratorAccess`. Recortarlo a los servicios que
+  se usan de verdad.
+- El grupo de seguridad abre 5432 a `0.0.0.0/0` porque App Runner sale con IPs
+  dinámicas. Mitigado con SSL obligatorio y contraseña de 32 caracteres. Ver la
+  discusión de la opción B (NAT Gateway) más arriba.
