@@ -1,7 +1,7 @@
 # Layerbase — estado, vulnerabilidades y pendientes
 
 > Auditoría inicial del 2026-08-16 sobre `feature/panel-admin-moderacion` (commit
-> `99d593b`), con 66 tests. **Vivo: última actualización 2026-08-22, 183 tests en
+> `99d593b`), con 66 tests. **Vivo: última actualización 2026-10-12, 186 tests en
 > verde.** Se revisa código real, no documentación.
 >
 > Orden de trabajo acordado: **funcional primero, estética después**. El módulo de
@@ -339,14 +339,16 @@ de lo que queda ya no es ese, es el acordado el 2026-08-19:**
 | 2 | **I.2 — Imagen de producción** | ✅ 2026-08-22 |
 | 3 | **I.3 — Almacenamiento en S3** | ✅ 2026-08-22 (código; faltan los buckets) |
 | 4 | **I.4 — El frontend apunta a la API** | ✅ 2026-08-22 |
-| 5 | **I.5 — Desplegar** | 🔵 **siguiente — bloqueada en ti**, ver abajo |
+| 5 | **I.5 — Desplegar** | ✅ 2026-08-22, desmontado el 2026-10-12 |
 | 6 | **J — Paso a producción** | 🔴 después |
 | — | Vincular cuentas desde el perfil | 🔴 sin fecha, no bloquea |
 | 7 | **K+ — Compras / Stripe** — solo pago único a precio fijo | ⏸ **últimas fases, por decisión propia** |
 | 8 | **Pantalla de preferencias** | ⏸ **últimas fases, por decisión propia** |
 | 9 | **Suscripciones** (plan Pro/Team de la plataforma, no venta de componentes) | ⏸ al final de todo |
 
-**La beta cerrada termina al acabar I.5.** Todo lo que va después (dominio,
+**La beta cerrada se completó y se desmontó.** El siguiente paso real es J.
+
+**La beta cerrada terminaba al acabar I.5.** Todo lo que va después (dominio,
 legales, Stripe) queda fuera por decisión propia.
 
 ---
@@ -648,7 +650,43 @@ habría roto desplegado. Ahora ambos salen de `API_BASE_URL`.
 
 Añadidos `frontend-layerbase/.env.example` y el fallback de SPA.
 
-#### I.5 — Desplegar 🔵 **bloqueada en ti**
+#### I.5 — Desplegar ✅ hecho, y desmontado el 2026-10-12
+
+**La beta estuvo en pie del 22 de agosto al 12 de octubre** en
+`d32o4lktjif33i.cloudfront.net`, con el backend en App Runner. Funcionó: se
+verificó el flujo de subida de un componente a S3, su descarga por URL firmada,
+el 403 al pedir el archivo sin firma, el login, el alta de 6 cuentas de prueba y
+el inicio de sesión con GitHub.
+
+**Se desmontó entera para dejar de gastar créditos.** Consumió ~43 $ de los
+100 $ en 51 días —unos 23-25 $ al mes—, todo de App Runner y RDS, que facturan
+por estar encendidos aunque no entre nadie. S3 y CloudFront no llegaron a un
+céntimo.
+
+**Sobrevive la copia `layerbase-final-20261012`**, que permite restaurar el
+estado exacto de la beta sin repetir migraciones ni semillas.
+
+Lo que quedó sin probar: subir un avatar, un archivo de 3 MB y aprobar un
+componente de punta a punta.
+
+El runbook de [`docker/production/DESPLIEGUE.md`](docker/production/DESPLIEGUE.md)
+sirve tal cual para volver a levantarlo; solo hay que usar un sufijo nuevo en los
+nombres de bucket, que son globales.
+
+#### Lo que dejó por el camino
+
+- **Google OAuth no se llegó a configurar.** Publicar su app exige demostrar la
+  propiedad del dominio en Search Console, y `cloudfront.net` es de Amazon. En
+  modo Prueba habría que apuntar a mano el correo de cada tester. El botón se
+  ocultó con `VITE_OAUTH_PROVIDERS=github`; vuelve quitando esa variable cuando
+  haya dominio propio.
+- **GitHub OAuth sí funcionó**, con una app apuntando a la URL de App Runner.
+  Esa app sigue viva en la cuenta de GitHub y su URL de retorno ya no existe:
+  conviene borrarla o reapuntarla.
+- **Una petición sin sesión devolvía 500 en vez de 401.** Laravel evalúa su
+  `redirectGuestsTo(fn () => route('login'))` dentro del middleware, antes de que
+  el manejador de excepciones opine, y esa ruta no existe en una API desacoplada.
+  Arreglado, con frontera en `tests/Feature/Auth/UnauthenticatedApiTest.php`.
 
 Todo lo que depende del código está hecho. Lo que falta son altas que llevan
 tarjeta o verificación por correo:

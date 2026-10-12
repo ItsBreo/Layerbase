@@ -286,7 +286,27 @@ formato lo entienden Cloudflare Pages y Netlify, no CloudFront.
 
 ---
 
-## Recursos reales creados (2026-08-22)
+## Despliegue desmontado el 2026-10-12
+
+> **La infraestructura de abajo YA NO EXISTE.** Se borró entera para dejar de
+> gastar créditos: la beta estuvo en pie del 22 de agosto al 12 de octubre y
+> consumió ~43 $ de los 100 $ de crédito, a razón de unos 23-25 $ al mes. Lo que
+> facturaba era App Runner y RDS, que cobran por estar encendidos aunque no entre
+> nadie; S3 y CloudFront no llegaban a un céntimo.
+>
+> **Lo único que sobrevive** es la copia de seguridad final de la base de datos,
+> `layerbase-final-20261012`. Con ella se puede restaurar el estado exacto que
+> tenía la beta —los 7 usuarios incluidos— sin repetir migraciones ni semillas.
+>
+> Para volver a levantarlo, este runbook sirve tal cual: los pasos no han
+> cambiado, solo hay que generar identificadores nuevos (los nombres de bucket
+> son globales, así que el sufijo tiene que ser otro). En el paso 4, en vez de
+> migrar y sembrar, se restaura esa copia.
+>
+> Lo que quedó sin probar al desmontar: subir un avatar, un archivo de 3 MB y
+> aprobar un componente de punta a punta.
+
+## Recursos que hubo (2026-08-22 — 2026-10-12)
 
 Cuenta **126571941460**, región **eu-west-1**.
 
